@@ -172,6 +172,78 @@ rules:
   - update
   - watch
 - apiGroups:
+  - resources.my.domain
+  resources:
+  - applications
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - resources.my.domain
+  resources:
+  - applications/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - resources.my.domain
+  resources:
+  - applications/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - resources.my.domain
+  resources:
+  - components
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - resources.my.domain
+  resources:
+  - components/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - resources.my.domain
+  resources:
+  - components/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - resources.theketch.io
+  resources:
+  - components
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - resources.theketch.io
+  resources:
+  - components/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - theketch.io
   resources:
   - apps

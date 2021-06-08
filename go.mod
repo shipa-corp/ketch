@@ -4,17 +4,15 @@ go 1.16
 
 require (
 	bou.ke/monkey v1.0.2
-	github.com/BurntSushi/toml v0.3.1 // indirect
-	github.com/buildpacks/pack v0.15.1 // indirect
-	github.com/docker/cli v0.0.0-20200312141509-ef2f64abbd37
-	github.com/docker/distribution v2.7.1+incompatible
-	github.com/docker/docker v1.4.2-0.20200221181110-62bd5a33f707
+	github.com/BurntSushi/toml v0.3.1
+	github.com/buildpacks/pack v0.15.1
 	github.com/go-logr/logr v0.1.0
 	github.com/google/go-cmp v0.5.2
 	github.com/google/go-containerregistry v0.1.4
 	github.com/mattn/go-runewidth v0.0.7 // indirect
+	github.com/onsi/ginkgo v1.12.1
+	github.com/onsi/gomega v1.10.2
 	github.com/pkg/errors v0.9.1
-	github.com/sabhiram/go-gitignore v0.0.0-20201211210132-54b8a0bf510f
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
