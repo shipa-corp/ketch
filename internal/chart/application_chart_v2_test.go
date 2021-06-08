@@ -158,7 +158,7 @@ spec:
 		{
 			componentSpec: componentSpec,
 			componentLink: &ketchv1.ComponentLink{},
-			details:       "happy",
+			details:       "success",
 		},
 	}
 	for _, test := range tests {

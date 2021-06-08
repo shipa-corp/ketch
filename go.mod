@@ -10,15 +10,13 @@ require (
 	github.com/google/go-cmp v0.5.2
 	github.com/google/go-containerregistry v0.1.4
 	github.com/mattn/go-runewidth v0.0.7 // indirect
-	github.com/onsi/ginkgo v1.12.1
-	github.com/onsi/gomega v1.10.2
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	github.com/thediveo/enumflag v0.10.1
 	gopkg.in/src-d/go-git.v4 v4.13.1
-	gopkg.in/yaml.v2 v2.3.0 // indirect
+	gopkg.in/yaml.v2 v2.3.0
 	gotest.tools v2.2.0+incompatible
 	helm.sh/helm/v3 v3.3.1
 	k8s.io/api v0.18.8

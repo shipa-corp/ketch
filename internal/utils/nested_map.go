@@ -75,7 +75,6 @@ func (n NestedMap) Set(keys []interface{}, value interface{}) error {
 			return errors.Errorf("invalid value type: %s", reflect.TypeOf(next))
 		}
 	}
-	return nil
 }
 
 func (n NestedMapSlice) Set(keys []interface{}, value interface{}) error {
