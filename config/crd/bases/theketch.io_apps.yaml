@@ -43,10 +43,6 @@ spec:
         spec:
           description: AppSpec defines the desired state of App.
           properties:
-            Framework:
-              description: Framework is a name of a Framework used to run the application.
-              minLength: 1
-              type: string
             buildPacks:
               description: BuildPacks is a list of build packs to use when building
                 from source.
@@ -485,6 +481,10 @@ spec:
                 - value
                 type: object
               type: array
+            framework:
+              description: Framework is a name of a Framework used to run the application.
+              minLength: 1
+              type: string
             ingress:
               description: Ingress contains configuration of entrypoints to access
                 the application.
@@ -504,8 +504,8 @@ spec:
             version:
               type: string
           required:
-          - Framework
           - deployments
+          - framework
           - ingress
           type: object
         status:

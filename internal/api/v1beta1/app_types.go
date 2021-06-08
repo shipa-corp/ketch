@@ -208,7 +208,7 @@ type AppSpec struct {
 
 	// Framework is a name of a Framework used to run the application.
 	// +kubebuilder:validation:MinLength=1
-	Framework string `json:"Framework"`
+	Framework string `json:"framework"`
 
 	// Ingress contains configuration of entrypoints to access the application.
 	Ingress IngressSpec `json:"ingress"`
