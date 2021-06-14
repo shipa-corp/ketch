@@ -36,13 +36,97 @@ spec:
         spec:
           description: ComponentSpec defines the desired state of Component
           properties:
-            foo:
-              description: Foo is an example field of Component. Edit component_types.go
-                to remove/update
-              type: string
+            default:
+              description: Default is whether the component is applied by default
+                when creating an Application
+              type: boolean
+            schematic:
+              description: Schematic
+              properties:
+                kube:
+                  description: Kube is a template with parameter list for a certain
+                    Kubernetes workload resource as a component.
+                  properties:
+                    templates:
+                      items:
+                        properties:
+                          object:
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                          parameters:
+                            items:
+                              properties:
+                                fieldPaths:
+                                  items:
+                                    type: string
+                                  type: array
+                                name:
+                                  type: string
+                                required:
+                                  type: boolean
+                                type:
+                                  type: string
+                                value:
+                                  type: string
+                              required:
+                              - fieldPaths
+                              - name
+                              - required
+                              - type
+                              - value
+                              type: object
+                            type: array
+                        required:
+                        - object
+                        type: object
+                      type: array
+                  required:
+                  - templates
+                  type: object
+              required:
+              - kube
+              type: object
+            workload:
+              description: Workload represents an identifier to a workload type
+              properties:
+                workloadGVK:
+                  description: Definition is a reference to Workload definition via
+                    Group, Version, Kind
+                  properties:
+                    apiVersion:
+                      description: APIVersion defines the versioned schema of this
+                        representation of an object.
+                      type: string
+                    group:
+                      description: Group defines the object's group
+                      type: string
+                    kind:
+                      description: Kind is a string value representing the REST resource
+                        this object represents.
+                      type: string
+                  required:
+                  - apiVersion
+                  - group
+                  - kind
+                  type: object
+              required:
+              - workloadGVK
+              type: object
+          required:
+          - default
+          - workload
           type: object
         status:
           description: ComponentStatus defines the observed state of Component
+          properties:
+            message:
+              description: Message contains any details (e.g. error) regarding a status
+              type: string
+            status:
+              description: Status reflects the observed core v1 status of a resource
+              type: string
+          required:
+          - status
           type: object
       type: object
   version: v1beta1

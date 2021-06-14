@@ -36,13 +36,101 @@ spec:
         spec:
           description: ApplicationSpec defines the desired state of Application
           properties:
-            foo:
-              description: Foo is an example field of Application. Edit application_types.go
-                to remove/update
+            Framework:
+              description: Framework is a name of a Framework used to run the application.
+              minLength: 1
               type: string
+            buildPacks:
+              description: BuildPacks is a list of build packs to use when building
+                from source.
+              items:
+                type: string
+              type: array
+            builder:
+              description: Builder is the name of the builder used to build source
+                code.
+              type: string
+            canary:
+              description: Canary contains a configuration which will be required
+                for canary deployments.
+              properties:
+                active:
+                  description: Active shows if canary deployment is active for this
+                    application.
+                  type: boolean
+                currentStep:
+                  description: CurrentStep is the count for current step for a canary
+                    deployment.
+                  maximum: 100
+                  minimum: 0
+                  type: integer
+                nextScheduledTime:
+                  description: NextScheduledTime holds time of the next step.
+                  format: date-time
+                  type: string
+                started:
+                  description: Started holds time when canary started
+                  format: date-time
+                  type: string
+                stepTimeInterval:
+                  description: A Duration represents the elapsed time between two
+                    instants as an int64 nanosecond count. The representation limits
+                    the largest representable duration to approximately 290 years.
+                  format: int64
+                  type: integer
+                stepWeight:
+                  maximum: 100
+                  minimum: 0
+                  type: integer
+                steps:
+                  maximum: 100
+                  minimum: 0
+                  type: integer
+              type: object
+            components:
+              items:
+                properties:
+                  name:
+                    type: string
+                  properties: {}
+                  type:
+                    type: string
+                required:
+                - name
+                - properties
+                - type
+                type: object
+              type: array
+            description:
+              maxLength: 140
+              type: string
+            dockerRegisty:
+              description: DockerRegistry contains docker registry configuration of
+                the application.
+              properties:
+                secretName:
+                  description: SecretName is added to the "imagePullSecrets" list
+                    of each application pod.
+                  type: string
+              type: object
+            version:
+              type: string
+          required:
+          - Framework
           type: object
         status:
           description: ApplicationStatus defines the observed state of Application
+          properties:
+            messge:
+              type: string
+            status:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              type: string
+          required:
+          - messge
+          - status
           type: object
       type: object
   version: v1beta1
