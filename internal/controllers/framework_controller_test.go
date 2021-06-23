@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ketchv1 "github.com/shipa-corp/ketch/internal/api/v1beta1"
 )
 
 func TestFrameworkReconciler_Reconcile(t *testing.T) {
-	defaultObjects := []client.Object{
+	defaultObjects := []runtime.Object{
 		&ketchv1.Framework{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{

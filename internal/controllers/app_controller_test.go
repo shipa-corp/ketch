@@ -11,9 +11,9 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ketchv1 "github.com/shipa-corp/ketch/internal/api/v1beta1"
 	"github.com/shipa-corp/ketch/internal/chart"
@@ -52,7 +52,7 @@ func (h *helm) DeleteChart(appName string) error {
 
 func TestAppReconciler_Reconcile(t *testing.T) {
 
-	defaultObjects := []client.Object{
+	defaultObjects := []runtime.Object{
 		&ketchv1.Framework{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "working-framework",

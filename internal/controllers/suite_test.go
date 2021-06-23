@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,18 +36,14 @@ import (
 )
 
 type testingContext struct {
-	context.Context
 	env       *envtest.Environment
+	done      chan struct{}
 	k8sClient client.Client
 }
 
-var cancel context.CancelFunc
-
-func setup(reader templates.Reader, helm Helm, objects []client.Object) (*testingContext, error) {
-	var cancelCtx context.Context
-	cancelCtx, cancel = context.WithCancel(context.Background())
+func setup(reader templates.Reader, helm Helm, objects []runtime.Object) (*testingContext, error) {
 	ctx := &testingContext{
-		Context: cancelCtx,
+		done: make(chan struct{}),
 		env: &envtest.Environment{
 			CRDDirectoryPaths: []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		},
@@ -87,7 +84,7 @@ func setup(reader templates.Reader, helm Helm, objects []client.Object) (*testin
 	}
 
 	go func() {
-		_ = k8sManager.Start(ctx)
+		_ = k8sManager.Start(ctx.done)
 	}()
 
 	for _, obj := range objects {
@@ -128,7 +125,7 @@ func teardown(ctx *testingContext) {
 	if ctx == nil {
 		return
 	}
-	cancel()
+	ctx.done <- struct{}{}
 	err := ctx.env.Stop()
 	if err != nil {
 		panic(err)

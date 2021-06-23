@@ -10,6 +10,7 @@ import (
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,9 +29,9 @@ const (
 
 // Client represents go sdk k8s client operations that we need.
 type Client interface {
-	Get(ctx context.Context, key client.ObjectKey, obj client.Object) error
-	Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error
-	Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error
+	Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error
+	Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error
+	Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error
 }
 
 type SourceBuilderFn func(context.Context, *build.CreateImageFromSourceRequest, ...build.Option) error
