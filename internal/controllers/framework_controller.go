@@ -44,7 +44,8 @@ type FrameworkReconciler struct {
 // +kubebuilder:rbac:groups=theketch.io,resources=frameworks,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=theketch.io,resources=frameworks/status,verbs=get;update;patch
 
-func (r *FrameworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *FrameworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+	ctx := context.Background()
 	_ = r.Log.WithValues("framework", req.NamespacedName)
 
 	framework := ketchv1.Framework{}

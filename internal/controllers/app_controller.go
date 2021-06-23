@@ -87,7 +87,8 @@ type Helm interface {
 // +kubebuilder:rbac:groups="traefik.containo.us",resources=traefikservices/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch;update;delete
 
-func (r *AppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *AppReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+	ctx := context.Background()
 	_ = r.Log.WithValues("app", req.NamespacedName)
 
 	app := ketchv1.App{}

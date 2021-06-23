@@ -1,5 +1,6 @@
 package mocks
 
+/*
 import (
 	"context"
 
@@ -58,4 +59,4 @@ func (m MockClient) RESTMapper() meta.RESTMapper {
 
 var (
 	_ client.Client = &MockClient{}
-)
+)*/
