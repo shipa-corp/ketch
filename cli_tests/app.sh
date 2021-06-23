@@ -57,7 +57,6 @@ setup() {
 }
 
 @test "app list" {
-  run bash -c 'echo ERROR; false'
   result=$($KETCH app list)
   headerRegex="NAME[ \t]+FRAMEWORK[ \t]+STATE[ \t]+ADDRESSES[ \t]+BUILDER[ \t]+DESCRIPTION"
   dataRegex="$APP_NAME[ \t]+$FRAMEWORK[ \t]+(deploying|running)"
@@ -66,13 +65,14 @@ setup() {
   counter=0
   while [[ ! $result =~ $dataRegex ]]
   do
-    ((counter++))
+    counter=$((counter + 1))
     if [ $counter -ge 10 ]
     then
       echo "App failed to deploy"
       exit -1
     fi
-    sleep 10
+    sleep 20
+    result=$($KETCH app list)
   done
 }
 
