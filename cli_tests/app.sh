@@ -83,7 +83,7 @@ TEST_ENVVAR_VALUE="BAR"
       exit -1
     fi
 
-    sleep 12
+    sleep 30
     result=$($KETCH app list)
   done
 }
