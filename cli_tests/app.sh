@@ -7,20 +7,18 @@
 # assure you have bats installed locally (via apt, brew, etc.)
 # ./cli_tests/app.sh
 
-setup() {
-    if [[ -z "${KETCH_EXECUTABLE_PATH}" ]]; then
-    KETCH=$(pwd)/bin/ketch
-  else
-    KETCH="${KETCH_EXECUTABLE_PATH}"
-  fi
-  INGRESS=$(kubectl get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-  FRAMEWORK="myframework"
-  APP_IMAGE="gcr.io/shipa-ci/sample-go-app:latest"
-  APP_NAME="sample-app"
-  CNAME="my-cname.com"
-  TEST_ENVVAR_KEY="FOO"
-  TEST_ENVVAR_VALUE="BAR"
-}
+if [[ -z "${KETCH_EXECUTABLE_PATH}" ]]; then
+  KETCH=$(pwd)/bin/ketch
+else
+  KETCH="${KETCH_EXECUTABLE_PATH}"
+fi
+INGRESS=$(kubectl get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+FRAMEWORK="myframework"
+APP_IMAGE="gcr.io/shipa-ci/sample-go-app:latest"
+APP_NAME="sample-app"
+CNAME="my-cname.com"
+TEST_ENVVAR_KEY="FOO"
+TEST_ENVVAR_VALUE="BAR"
 
 @test "help" {
   result="$($KETCH help)"
@@ -57,21 +55,35 @@ setup() {
 }
 
 @test "app list" {
+  # prints any output if test fails
+  run bash -c 'echo ERROR; false'
   result=$($KETCH app list)
   headerRegex="NAME[ \t]+FRAMEWORK[ \t]+STATE[ \t]+ADDRESSES[ \t]+BUILDER[ \t]+DESCRIPTION"
-  dataRegex="$APP_NAME[ \t]+$FRAMEWORK[ \t]+(deploying|running)"
-  echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   counter=0
-  while [[ ! $result =~ $dataRegex ]]
+  flag=0
+  while [[ $flag -le 0 ]]
   do
     counter=$((counter + 1))
+    if echo $result | grep -q "running"
+    then
+
+      # "found running app"
+      if [[ $result =~ $APP_NAME ]]
+      then
+        # running app is the sample-app, so break from loop
+        flag=1
+      fi
+    fi
+
     if [ $counter -ge 10 ]
     then
+      echo "RECEIVED:" $result
       echo "App failed to deploy"
       exit -1
     fi
-    sleep 20
+
+    sleep 2
     result=$($KETCH app list)
   done
 }
@@ -176,8 +188,9 @@ setup() {
   [[ $result =~ "Successfully removed!" ]]
 }
 
-@test "framework remove" {
-  result=$(echo "ketch-$FRAMEWORK" | $KETCH framework remove "$FRAMEWORK")
-  echo "RECEIVED:" $result
-  [[ $result =~ "Framework successfully removed!" ]]
-}
+# needs to wait for the app to be successfully removed
+#@test "framework remove" {
+#  result=$(echo "ketch-$FRAMEWORK" | $KETCH framework remove "$FRAMEWORK")
+#  echo "RECEIVED:" $result
+#  [[ $result =~ "Framework successfully removed!" ]]
+#}
