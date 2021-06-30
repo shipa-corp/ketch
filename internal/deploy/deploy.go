@@ -72,12 +72,19 @@ func getAppWithUpdater(ctx context.Context, client Client, cs *ChangeSet) (*ketc
 		if err = validateCreateApp(ctx, client, cs.appName, cs); err != nil {
 			return nil, nil, err
 		}
+		generateDefaultCName := true
+		var cname ketchv1.CnameList
+		if cs.cname != nil {
+			generateDefaultCName = false
+			cname = *cs.cname
+		}
 
 		return &app, func(ctx context.Context, app *ketchv1.App, _ bool) error {
 			app.ObjectMeta.Name = cs.appName
 			app.Spec.Deployments = []ketchv1.AppDeploymentSpec{}
 			app.Spec.Ingress = ketchv1.IngressSpec{
-				GenerateDefaultCname: true,
+				GenerateDefaultCname: generateDefaultCName,
+				Cnames:               cname,
 			}
 			return client.Create(ctx, app)
 		}, nil
@@ -302,6 +309,9 @@ func makeProcfile(cfg *registryv1.ConfigFile, params *ChangeSet) (*chart.Procfil
 	procFileName, err := params.getProcfileName()
 	if !isMissing(err) {
 		return chart.NewProcfile(procFileName)
+	}
+	if params.processes != nil {
+		return chart.ProcfileFromProcesses(*params.processes)
 	}
 
 	cmds := append(cfg.Config.Entrypoint, cfg.Config.Cmd...)

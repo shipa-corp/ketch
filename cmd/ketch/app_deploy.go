@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/shipa-corp/ketch/internal/validation"
+
 	"github.com/spf13/cobra"
 
 	"github.com/shipa-corp/ketch/internal/deploy"
@@ -42,7 +44,7 @@ func newAppDeployCmd(cfg config, params *deploy.Services, configDefaultBuilder s
 			if configDefaultBuilder != "" {
 				deploy.DefaultBuilder = configDefaultBuilder
 			}
-			return deploy.New(options.GetChangeSet(cmd.Flags())).Run(cmd.Context(), params)
+			return appDeploy(cmd, options, params)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			return autoCompleteAppNames(cfg, toComplete)
@@ -73,4 +75,19 @@ func newAppDeployCmd(cfg config, params *deploy.Services, configDefaultBuilder s
 		return autoCompleteBuilderNames(cfg, toComplete)
 	})
 	return cmd
+}
+
+func appDeploy(cmd *cobra.Command, options deploy.Options, params *deploy.Services) error {
+	var changeSet *deploy.ChangeSet
+	var err error
+	switch {
+	case validation.ValidateYamlFilename(options.AppName):
+		changeSet, err = options.GetChangeSetFromYaml(options.AppName)
+		if err != nil {
+			return err
+		}
+	default:
+		changeSet = options.GetChangeSet(cmd.Flags())
+	}
+	return deploy.New(changeSet).Run(cmd.Context(), params)
 }
