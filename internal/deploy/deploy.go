@@ -5,6 +5,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"path"
 	"time"
 
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
@@ -25,6 +26,7 @@ const (
 	defaultTrafficWeight = 100
 	minimumSteps         = 2
 	maximumSteps         = 100
+	defaultProcFile      = "Procfile"
 )
 
 // Client represents go sdk k8s client operations that we need.
@@ -113,6 +115,13 @@ func getUpdatedApp(ctx context.Context, client Client, cs *ChangeSet) (*ketchv1.
 		app = a
 
 		if cs.sourcePath != nil {
+			// processes exist in params (e.g. from yaml file); write Procfile locally
+			if cs.processes != nil {
+				err = chart.WriteProcfile(*cs.processes, path.Join(*cs.sourcePath, defaultProcFile))
+				if err != nil {
+					return err
+				}
+			}
 			if err := validateSourceDeploy(cs); err != nil {
 				return err
 			}
@@ -216,7 +225,7 @@ func deployFromSource(ctx context.Context, svc *Services, app *ketchv1.App, para
 		return err
 	}
 
-	procfile, err := makeProcfile(imgConfig, params)
+	procfile, err := chart.NewProcfile(path.Join(sourcePath, defaultProcFile))
 	if err != nil {
 		return err
 	}
@@ -273,7 +282,7 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 		return err
 	}
 
-	procfile, err := makeProcfile(imgConfig, params)
+	procfile, err := makeProcfile(imgConfig, "")
 	if err != nil {
 		return err
 	}
@@ -305,15 +314,13 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 	return nil
 }
 
-func makeProcfile(cfg *registryv1.ConfigFile, params *ChangeSet) (*chart.Procfile, error) {
-	// processes defined in spec yaml
-	if params.processes != nil {
-		return chart.ProcfileFromProcesses(*params.processes)
-	}
-	procFileName, err := params.getProcfileName()
-	if !isMissing(err) {
-		return chart.NewProcfile(procFileName)
-	}
+func makeProcfile(cfg *registryv1.ConfigFile, procFileName string) (*chart.Procfile, error) {
+	//if procFileName != "" {
+	//	// validating of path handled by validateSourceDeploy function
+	//	return chart.NewProcfile(procFileName)
+	//}
+
+	// no procfile (not building from source)
 	cmds := append(cfg.Config.Entrypoint, cfg.Config.Cmd...)
 	if len(cmds) == 0 {
 		return nil, fmt.Errorf("can't use image, no entrypoint or commands")

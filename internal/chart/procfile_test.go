@@ -21,7 +21,7 @@ func TestParseProcfile(t *testing.T) {
 			content: "web: command arg1 arg2",
 			want: &Procfile{
 				Processes: map[string][]string{
-					"web": {"command arg1 arg2"},
+					"web": {"web"},
 				},
 				RoutableProcessName: "web",
 			},
@@ -31,7 +31,7 @@ func TestParseProcfile(t *testing.T) {
 			content: "long-command-name: command arg1 arg2",
 			want: &Procfile{
 				Processes: map[string][]string{
-					"long-command-name": {"command arg1 arg2"},
+					"long-command-name": {"long-command-name"},
 				},
 				RoutableProcessName: "long-command-name",
 			},
@@ -41,8 +41,8 @@ func TestParseProcfile(t *testing.T) {
 			content: "web: command arg1 arg2\nworker: celery worker",
 			want: &Procfile{
 				Processes: map[string][]string{
-					"web":    {"command arg1 arg2"},
-					"worker": {"celery worker"},
+					"web":    {"web"},
+					"worker": {"worker"},
 				},
 				RoutableProcessName: "web",
 			},
@@ -52,8 +52,8 @@ func TestParseProcfile(t *testing.T) {
 			content: "worker: command arg1 arg2\n\r\nabc: abc-arg1 abc-arg2",
 			want: &Procfile{
 				Processes: map[string][]string{
-					"worker": {"command arg1 arg2"},
-					"abc":    {"abc-arg1 abc-arg2"},
+					"worker": {"worker"},
+					"abc":    {"abc"},
 				},
 				RoutableProcessName: "abc",
 			},
@@ -63,9 +63,9 @@ func TestParseProcfile(t *testing.T) {
 			content: "bbb: bbb-command\n\r\nzzz: zzz-command\r\naaa: aaa-command",
 			want: &Procfile{
 				Processes: map[string][]string{
-					"aaa": {"aaa-command"},
-					"zzz": {"zzz-command"},
-					"bbb": {"bbb-command"},
+					"aaa": {"aaa"},
+					"zzz": {"zzz"},
+					"bbb": {"bbb"},
 				},
 				RoutableProcessName: "aaa",
 			},
@@ -75,19 +75,19 @@ func TestParseProcfile(t *testing.T) {
 			content: "bbb: bbb-command\n# some comment\n\nzzz: zzz-command\r\naaa: aaa-command\n # another comment",
 			want: &Procfile{
 				Processes: map[string][]string{
-					"aaa": {"aaa-command"},
-					"zzz": {"zzz-command"},
-					"bbb": {"bbb-command"},
+					"aaa": {"aaa"},
+					"zzz": {"zzz"},
+					"bbb": {"bbb"},
 				},
 				RoutableProcessName: "aaa",
 			},
 		},
 		{
-			name:    "ingore broken lines",
+			name:    "ignore broken lines",
 			content: "b,bb: bbb-command\n\r\n: zzz-command\r\naaa: aaa-command",
 			want: &Procfile{
 				Processes: map[string][]string{
-					"aaa": {"aaa-command"},
+					"aaa": {"aaa"},
 				},
 				RoutableProcessName: "aaa",
 			},

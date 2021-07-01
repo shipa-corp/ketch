@@ -2,7 +2,9 @@ package chart
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -45,6 +47,8 @@ func (p *Procfile) SortedNames() []string {
 }
 
 // ParseProcfile parses the content of Procfile and returns a Procfile instance.
+// this function should only be called when building from source, since deploying
+// from image does not allow a user to specify a Procfile
 func ParseProcfile(content string) (*Procfile, error) {
 	procfile := strings.Split(content, "\n")
 	processes := make(map[string][]string, len(procfile))
@@ -52,8 +56,11 @@ func ParseProcfile(content string) (*Procfile, error) {
 	for _, process := range procfile {
 		if p := procfileRegex.FindStringSubmatch(process); p != nil {
 			name := p[1]
-			cmd := p[2]
-			processes[name] = []string{strings.TrimSpace(cmd)}
+			// inside the docker image created by pack, executables specified as the names
+			// in the procfile will be added to /cnb/process. These executables run the commands
+			// specified in the procfile. Trying to run the commands as they are in the Procfile
+			// will result in an executable file not found in $PATH: unknown error
+			processes[name] = []string{strings.TrimSpace(name)}
 			names = append(names, name)
 		}
 	}
@@ -91,4 +98,19 @@ func routableProcess(names []string) string {
 	}
 	sort.Strings(names)
 	return names[0]
+}
+
+func WriteProcfile(processes []ketchv1.ProcessSpec, dest string) error {
+	f, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	for _, process := range processes {
+		_, err = fmt.Fprintf(f, "%s: %s\n", process.Name, strings.Join(process.Cmd, " "))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

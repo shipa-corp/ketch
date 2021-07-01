@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 
 	ketchv1 "github.com/shipa-corp/ketch/internal/api/v1beta1"
 	kerrs "github.com/shipa-corp/ketch/internal/errors"
@@ -100,8 +101,13 @@ func validateDeploy(cs *ChangeSet, app *ketchv1.App) error {
 }
 
 func validateSourceDeploy(cs *ChangeSet) error {
-	if _, err := cs.getSourceDirectory(); err != nil {
+	sourcePath, err := cs.getSourceDirectory()
+	if err != nil {
 		return err
+	}
+	stat, err := os.Stat(path.Join(sourcePath, defaultProcFile))
+	if err != nil || stat.IsDir() {
+		return fmt.Errorf("%q not found in root of source directory", defaultProcFile)
 	}
 	return nil
 }

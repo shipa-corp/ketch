@@ -51,6 +51,16 @@ setup() {
   [[ $result =~ "Successfully updated!" ]]
 }
 
+@test "framework export" {
+  run $KETCH framework export "$FRAMEWORK"
+  result=$(cat framework.yaml)
+  echo "RECEIVED:" $result
+  [[ $result =~ "name: $FRAMEWORK" ]]
+  [[ $result =~ "namespace: ketch-$FRAMEWORK" ]]
+  [[ $result =~ "appQuotaLimit: 1" ]]
+  rm -f framework.yaml
+}
+
 @test "app deploy" {
   run $KETCH app deploy "$APP_NAME" --framework "$FRAMEWORK" -i "$APP_IMAGE"
   [[ $status -eq 0 ]]

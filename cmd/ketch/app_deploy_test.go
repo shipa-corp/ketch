@@ -128,7 +128,8 @@ func getImageConfig(ctx context.Context, args deploy.ImageConfigRequest) (*regis
 	}, nil
 }
 
-var ketchYaml string = `
+var (
+	ketchYaml string = `
 kubernetes:
   processes:
     web:
@@ -145,6 +146,11 @@ kubernetes:
     worker-2:
       ports: []
 `
+	procfile string = `
+web: python app.py
+worker: python app.py
+`
+)
 
 func TestNewCommand(t *testing.T) {
 	tt := []struct {
@@ -168,6 +174,7 @@ func TestNewCommand(t *testing.T) {
 				dir := t.TempDir()
 				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
 				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			validate: func(t *testing.T, m deploy.Client) {
 				mock, ok := m.(*mockClient)
@@ -199,6 +206,7 @@ func TestNewCommand(t *testing.T) {
 				dir := t.TempDir()
 				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
 				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			validate: func(t *testing.T, m deploy.Client) {
 				mock, ok := m.(*mockClient)
@@ -230,6 +238,7 @@ func TestNewCommand(t *testing.T) {
 				dir := t.TempDir()
 				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
 				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			validate: func(t *testing.T, m deploy.Client) {
 				mock, ok := m.(*mockClient)
@@ -263,6 +272,7 @@ func TestNewCommand(t *testing.T) {
 				dir := t.TempDir()
 				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
 				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			userDefault: "newDefault",
 			validate: func(t *testing.T, m deploy.Client) {
@@ -296,6 +306,7 @@ func TestNewCommand(t *testing.T) {
 				dir := t.TempDir()
 				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
 				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			userDefault: "newDefault",
 			validate: func(t *testing.T, m deploy.Client) {
@@ -343,6 +354,7 @@ func TestNewCommand(t *testing.T) {
 				dir := t.TempDir()
 				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
 				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			validate: func(t *testing.T, m deploy.Client) {
 				mock, ok := m.(*mockClient)
@@ -381,6 +393,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
 				require.Nil(t, os.Chdir(dir))
 				require.Nil(t, ioutil.WriteFile("src/ketch.yaml", []byte(ketchYaml), 0600))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			validate: func(t *testing.T, m deploy.Client) {
 				mock, ok := m.(*mockClient)
@@ -426,6 +439,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, os.MkdirAll(path.Join(dir, "src/include2"), 0700))
 				require.Nil(t, os.Chdir(dir))
 				require.Nil(t, ioutil.WriteFile("config/ketch.yaml", []byte(ketchYaml), 0600))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			validate: func(t *testing.T, m deploy.Client) {
 				mock, ok := m.(*mockClient)
@@ -461,6 +475,7 @@ func TestNewCommand(t *testing.T) {
 				dir := t.TempDir()
 				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
 				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			validate: func(t *testing.T, m deploy.Client) {
 				mock, ok := m.(*mockClient)
@@ -562,6 +577,7 @@ func TestNewCommand(t *testing.T) {
 				dir := t.TempDir()
 				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
 				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			params: &deploy.Services{
 				Client: func() *mockClient {
@@ -588,6 +604,36 @@ func TestNewCommand(t *testing.T) {
 				"--framework", "myframework",
 				"--image", "shipa/go-sample:latest",
 				"--env", "foo=bar,bobbdobbs",
+			},
+			setup: func(t *testing.T) {
+				dir := t.TempDir()
+				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
+				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
+			},
+			params: &deploy.Services{
+				Client: func() *mockClient {
+					m := newMockClient()
+					m.get[1] = func(_ *mockClient, _ runtime.Object) error {
+						return errors.NewNotFound(v1.Resource(""), "")
+					}
+					return m
+				}(),
+				KubeClient:     fake.NewSimpleClientset(),
+				Builder:        build.GetSourceHandler(&packMocker{}),
+				GetImageConfig: getImageConfig,
+				Wait:           nil,
+				Writer:         &bytes.Buffer{},
+			},
+		},
+		{
+			name:      "missing Procfile in src",
+			wantError: true,
+			arguments: []string{
+				"myapp",
+				"src",
+				"--framework", "myframework",
+				"--image", "shipa/go-sample:latest",
 			},
 			setup: func(t *testing.T) {
 				dir := t.TempDir()

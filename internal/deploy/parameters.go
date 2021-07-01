@@ -25,7 +25,6 @@ const (
 	FlagApp            = "app"
 	FlagImage          = "image"
 	FlagKetchYaml      = "ketch-yaml"
-	FlagProcFile       = "procfile"
 	FlagStrict         = "strict"
 	FlagSteps          = "steps"
 	FlagStepInterval   = "step-interval"
@@ -75,7 +74,6 @@ type Options struct {
 	AppName                 string
 	Image                   string
 	KetchYamlFileName       string
-	ProcfileFileName        string
 	StrictKetchYamlDecoding bool
 	Steps                   int
 	StepTimeInterval        string
@@ -98,7 +96,6 @@ type ChangeSet struct {
 	sourcePath           *string
 	image                *string
 	ketchYamlFileName    *string
-	procfileFileName     *string
 	steps                *int
 	stepTimeInterval     *string
 	wait                 *bool
@@ -135,9 +132,6 @@ func (o Options) GetChangeSet(flags *pflag.FlagSet) *ChangeSet {
 		},
 		FlagKetchYaml: func(c *ChangeSet) {
 			c.ketchYamlFileName = &o.KetchYamlFileName
-		},
-		FlagProcFile: func(c *ChangeSet) {
-			c.procfileFileName = &o.ProcfileFileName
 		},
 		FlagSteps: func(c *ChangeSet) {
 			c.steps = &o.Steps
@@ -176,13 +170,6 @@ func (o Options) GetChangeSet(flags *pflag.FlagSet) *ChangeSet {
 		}
 	}
 	return &cs
-}
-
-func (c *ChangeSet) getProcfileName() (string, error) {
-	if c.procfileFileName == nil {
-		return "", newMissingError(FlagProcFile)
-	}
-	return *c.procfileFileName, nil
 }
 
 func (c *ChangeSet) getDescription() (string, error) {
