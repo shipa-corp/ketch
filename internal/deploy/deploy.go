@@ -315,11 +315,6 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 }
 
 func makeProcfile(cfg *registryv1.ConfigFile, procFileName string) (*chart.Procfile, error) {
-	//if procFileName != "" {
-	//	// validating of path handled by validateSourceDeploy function
-	//	return chart.NewProcfile(procFileName)
-	//}
-
 	// no procfile (not building from source)
 	cmds := append(cfg.Config.Entrypoint, cfg.Config.Cmd...)
 	if len(cmds) == 0 {

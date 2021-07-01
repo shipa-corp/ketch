@@ -80,10 +80,11 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 		envs = append(envs, ketchv1.Env{Name: arr[0], Value: arr[1]})
 	}
 
-	// processes, hooks
+	// processes, hooks, ports
 	var processes []ketchv1.ProcessSpec
 	var beforeHooks []string
 	var afterHooks []string
+	ketchYamlProcessConfig := make(map[string]ketchv1.KetchYamlProcessConfig)
 	for _, process := range application.Processes {
 		processes = append(processes, ketchv1.ProcessSpec{
 			Name:  process.Name,
@@ -95,8 +96,20 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 			beforeHooks = append(beforeHooks, hook.Restart.Before)
 			afterHooks = append(afterHooks, hook.Restart.After)
 		}
+		var ports []ketchv1.KetchYamlProcessPortConfig
+		for _, port := range process.Ports {
+			ports = append(ports, ketchv1.KetchYamlProcessPortConfig{
+				Protocol:   port.Protocol,
+				Port:       port.Port,
+				TargetPort: port.TargetPort,
+			})
+		}
+		ketchYamlProcessConfig[process.Name] = ketchv1.KetchYamlProcessConfig{
+			Ports: ports,
+		}
 	}
 
+	// assign hooks and ports (kubernetes processconfig) to ketch yaml data
 	ketchYamlData := &ketchv1.KetchYamlData{
 		Hooks: &ketchv1.KetchYamlHooks{
 			Restart: ketchv1.KetchYamlRestartHooks{
@@ -104,21 +117,16 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 				After:  afterHooks,
 			},
 		},
+		Kubernetes: &ketchv1.KetchYamlKubernetesConfig{
+			Processes: ketchYamlProcessConfig,
+		},
 	}
 	c := &ChangeSet{
-		appName:            application.Name,
-		version:            &application.Version,
-		appType:            &application.Type,
-		yamlStrictDecoding: true,
-		//sourcePath           *string
-		image: &application.Image,
-		//ketchYamlFileName    *string
-		//procfileFileName     *string
-		//steps                *int
-		//stepTimeInterval     *string
-		//wait                 *bool
-		//timeout              *string
-		//subPaths             *[]string
+		appName:              application.Name,
+		version:              &application.Version,
+		appType:              &application.Type,
+		yamlStrictDecoding:   true,
+		image:                &application.Image,
 		description:          &application.Description,
 		envs:                 &application.Environment,
 		framework:            &application.Framework,
