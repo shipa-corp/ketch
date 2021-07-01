@@ -306,14 +306,14 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 }
 
 func makeProcfile(cfg *registryv1.ConfigFile, params *ChangeSet) (*chart.Procfile, error) {
+	// processes defined in spec yaml
+	if params.processes != nil {
+		return chart.ProcfileFromProcesses(*params.processes)
+	}
 	procFileName, err := params.getProcfileName()
 	if !isMissing(err) {
 		return chart.NewProcfile(procFileName)
 	}
-	if params.processes != nil {
-		return chart.ProcfileFromProcesses(*params.processes)
-	}
-
 	cmds := append(cfg.Config.Entrypoint, cfg.Config.Cmd...)
 	if len(cmds) == 0 {
 		return nil, fmt.Errorf("can't use image, no entrypoint or commands")

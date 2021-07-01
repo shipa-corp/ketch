@@ -11,8 +11,8 @@ import (
 )
 
 type Application struct {
-	Version        string    `json:"version"` // TODO
-	Type           string    `json:"type"`    // TODO
+	Version        string    `json:"version"` // TODO - store on ketchv1.App
+	Type           string    `json:"type"`    // TODO - determines App or Job
 	Name           string    `json:"name"`
 	Image          string    `json:"image"`
 	Framework      string    `json:"framework"`
@@ -142,7 +142,8 @@ func (c *ChangeSet) applyDefaults() {
 	if c.appUnit == nil {
 		c.appUnit = &defaultAppUnit
 	}
-	if c.builder != nil || c.buildPacks != nil {
+	// building from source in PWD
+	if c.builder != nil {
 		sourcePath := "."
 		c.sourcePath = &sourcePath
 	}
