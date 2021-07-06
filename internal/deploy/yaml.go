@@ -7,7 +7,7 @@ import (
 	ketchv1 "github.com/shipa-corp/ketch/internal/api/v1beta1"
 
 	"github.com/shipa-corp/ketch/internal/errors"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 type Application struct {
@@ -27,10 +27,10 @@ type Application struct {
 }
 
 type Process struct {
-	Name  string `json:"version"` // required
-	Cmd   string `json:"cmd"`     // required
-	Units int    `json:"units"`   // unset? get from AppUnit
-	Ports []Port `json:"ports"`   // appDeploymentSpec
+	Name  string `json:"name"`  // required
+	Cmd   string `json:"cmd"`   // required
+	Units int    `json:"units"` // unset? get from AppUnit
+	Ports []Port `json:"ports"` // appDeploymentSpec
 	Hooks []Hook `json:"hooks"`
 }
 
@@ -72,24 +72,23 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 		return nil, err
 	}
 	var envs []ketchv1.Env
-	for _, env := range o.Envs {
+	for _, env := range application.Environment {
 		arr := strings.Split(env, "=")
 		if len(arr) != 2 {
 			continue
 		}
 		envs = append(envs, ketchv1.Env{Name: arr[0], Value: arr[1]})
 	}
-
 	// processes, hooks, ports
 	var processes []ketchv1.ProcessSpec
 	var beforeHooks []string
 	var afterHooks []string
 	ketchYamlProcessConfig := make(map[string]ketchv1.KetchYamlProcessConfig)
-	for _, process := range application.Processes {
+	for i, process := range application.Processes {
 		processes = append(processes, ketchv1.ProcessSpec{
 			Name:  process.Name,
 			Cmd:   strings.Split(process.Cmd, " "),
-			Units: &process.Units,
+			Units: &application.Processes[i].Units,
 			Env:   envs,
 		})
 		for _, hook := range process.Hooks {
@@ -104,8 +103,10 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 				TargetPort: port.TargetPort,
 			})
 		}
-		ketchYamlProcessConfig[process.Name] = ketchv1.KetchYamlProcessConfig{
-			Ports: ports,
+		if len(process.Ports) > 0 {
+			ketchYamlProcessConfig[process.Name] = ketchv1.KetchYamlProcessConfig{
+				Ports: ports,
+			}
 		}
 	}
 

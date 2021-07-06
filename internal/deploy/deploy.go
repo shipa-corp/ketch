@@ -23,10 +23,11 @@ import (
 )
 
 const (
-	defaultTrafficWeight = 100
-	minimumSteps         = 2
-	maximumSteps         = 100
-	defaultProcFile      = "Procfile"
+	defaultTrafficWeight   = 100
+	minimumSteps           = 2
+	maximumSteps           = 100
+	defaultProcFile        = "Procfile"
+	defaultUnitsPerProcess = 1
 )
 
 // Client represents go sdk k8s client operations that we need.
@@ -244,6 +245,7 @@ func deployFromSource(ctx context.Context, svc *Services, app *ketchv1.App, para
 	updateRequest.stepTimeInterval = interval
 	updateRequest.nextScheduledTime = time.Now().Add(interval)
 	updateRequest.started = time.Now()
+	updateRequest.processes = params.processes
 
 	if app, err = updateAppCRD(ctx, svc, params.appName, updateRequest); err != nil {
 		return errors.Wrap(err, "deploy from source failed")
@@ -300,6 +302,7 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 	updateRequest.stepTimeInterval = interval
 	updateRequest.nextScheduledTime = time.Now().Add(interval)
 	updateRequest.started = time.Now()
+	updateRequest.processes = params.processes
 
 	if app, err = updateAppCRD(ctx, svc, params.appName, updateRequest); err != nil {
 		return errors.Wrap(err, "deploy from image failed")
@@ -338,6 +341,7 @@ type updateAppCRDRequest struct {
 	nextScheduledTime time.Time
 	started           time.Time
 	stepTimeInterval  time.Duration
+	processes         *[]ketchv1.ProcessSpec
 }
 
 func updateAppCRD(ctx context.Context, svc *Services, appName string, args updateAppCRDRequest) (*ketchv1.App, error) {
@@ -350,9 +354,21 @@ func updateAppCRD(ctx context.Context, svc *Services, appName string, args updat
 		processes := make([]ketchv1.ProcessSpec, 0, len(args.procFile.Processes))
 		for _, processName := range args.procFile.SortedNames() {
 			cmd := args.procFile.Processes[processName]
+			units := defaultUnitsPerProcess
+			var env []ketchv1.Env
+			if args.processes != nil {
+				for _, process := range *args.processes {
+					if process.Name == processName && process.Units != nil {
+						units = *process.Units
+						env = process.Env
+					}
+				}
+			}
 			processes = append(processes, ketchv1.ProcessSpec{
-				Name: processName,
-				Cmd:  cmd,
+				Name:  processName,
+				Cmd:   cmd,
+				Units: &units,
+				Env:   env,
 			})
 		}
 		exposedPorts := make([]ketchv1.ExposedPort, 0, len(args.configFile.Config.ExposedPorts))
@@ -401,7 +417,6 @@ func updateAppCRD(ctx context.Context, svc *Services, appName string, args updat
 		}
 
 		updated.Spec.DeploymentsCount += 1
-
 		return svc.Client.Update(ctx, &updated)
 	})
 	return &updated, err
