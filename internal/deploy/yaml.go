@@ -143,6 +143,8 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 		builder:              application.Builder,
 		buildPacks:           application.BuildPacks,
 		appUnit:              application.AppUnit,
+		timeout:              &o.Timeout,
+		wait:                 &o.Wait,
 	}
 	if application.CName != nil {
 		c.cname = &ketchv1.CnameList{application.CName.DNSName}

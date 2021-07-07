@@ -4,18 +4,12 @@ import (
 	"os"
 	"testing"
 
+	"github.com/shipa-corp/ketch/internal/testutils"
+
 	ketchv1 "github.com/shipa-corp/ketch/internal/api/v1beta1"
 
 	"github.com/stretchr/testify/require"
 )
-
-func strPtr(s string) *string {
-	return &s
-}
-
-func intPtr(i int) *int {
-	return &i
-}
 
 func TestGetChangeSetFromYaml(t *testing.T) {
 	tests := []struct {
@@ -61,24 +55,30 @@ processes:
 appUnit: 2
 cname:
   dnsName: test.10.10.10.20`,
+			options: &Options{
+				Timeout: "1m",
+				Wait:    true,
+			},
 			changeSet: &ChangeSet{
 				appName:              "test",
-				appUnit:              intPtr(2),
+				appUnit:              testutils.IntPtr(2),
 				yamlStrictDecoding:   true,
-				sourcePath:           strPtr("."),
-				image:                strPtr("gcr.io/kubernetes/sample-app:latest"),
-				description:          strPtr("a test"),
+				sourcePath:           testutils.StrPtr("."),
+				image:                testutils.StrPtr("gcr.io/kubernetes/sample-app:latest"),
+				description:          testutils.StrPtr("a test"),
 				envs:                 &[]string{"PORT=6666", "FOO=bar"},
-				framework:            strPtr("myframework"),
+				framework:            testutils.StrPtr("myframework"),
 				dockerRegistrySecret: nil,
-				builder:              strPtr("heroku/buildpacks:20"),
+				builder:              testutils.StrPtr("heroku/buildpacks:20"),
 				buildPacks:           &[]string{"test-buildpack"},
 				cname:                &ketchv1.CnameList{"test.10.10.10.20"},
+				timeout:              testutils.StrPtr("1m"),
+				wait:                 testutils.BoolPtr(true),
 				processes: &[]ketchv1.ProcessSpec{
 					{
 						Name:  "web",
 						Cmd:   []string{"python", "app.py"},
-						Units: intPtr(1),
+						Units: testutils.IntPtr(1),
 						Env: []ketchv1.Env{
 							{
 								Name:  "PORT",
@@ -93,7 +93,7 @@ cname:
 					{
 						Name:  "worker",
 						Cmd:   []string{"python", "app.py"},
-						Units: intPtr(1),
+						Units: testutils.IntPtr(1),
 						Env: []ketchv1.Env{
 							{
 								Name:  "PORT",
@@ -136,8 +136,8 @@ cname:
 						},
 					},
 				},
-				version: strPtr("v1"),
-				appType: strPtr("Application"),
+				version: testutils.StrPtr("v1"),
+				appType: testutils.StrPtr("Application"),
 			},
 		},
 		{
@@ -145,21 +145,25 @@ cname:
 			yaml: `name: test
 framework: myframework
 image: gcr.io/kubernetes/sample-app:latest`,
+			options: &Options{},
 			changeSet: &ChangeSet{
 				appName:            "test",
-				appUnit:            intPtr(1),
+				appUnit:            testutils.IntPtr(1),
 				yamlStrictDecoding: true,
-				image:              strPtr("gcr.io/kubernetes/sample-app:latest"),
-				framework:          strPtr("myframework"),
-				version:            strPtr("v1"),
-				appType:            strPtr("Application"),
+				image:              testutils.StrPtr("gcr.io/kubernetes/sample-app:latest"),
+				framework:          testutils.StrPtr("myframework"),
+				version:            testutils.StrPtr("v1"),
+				appType:            testutils.StrPtr("Application"),
+				timeout:            testutils.StrPtr(""),
+				wait:               testutils.BoolPtr(false),
 			},
 		},
 		{
 			description: "validation error - framework",
 			yaml: `name: test
 image: gcr.io/kubernetes/sample-app:latest`,
-			errStr: "missing required field framework",
+			options: &Options{},
+			errStr:  "missing required field framework",
 		},
 		{
 			description: "validation error - processes without sourcePath",
@@ -169,7 +173,8 @@ image: gcr.io/kubernetes/sample-app:latest
 processes:
   - name: web
     cmd: python app.py`,
-			errStr: "running defined processes require a sourcePath",
+			options: &Options{},
+			errStr:  "running defined processes require a sourcePath",
 		},
 		{
 			description: "success - use appUnits as process.units when units are not specified",
@@ -187,29 +192,32 @@ processes:
     units: 1
   - name: worker
     cmd: python app.py`,
+			options: &Options{},
 			changeSet: &ChangeSet{
 				appName:            "test",
-				appUnit:            intPtr(2),
+				appUnit:            testutils.IntPtr(2),
 				yamlStrictDecoding: true,
-				sourcePath:         strPtr("."),
-				image:              strPtr("gcr.io/kubernetes/sample-app:latest"),
-				description:        strPtr("a test"),
-				builder:            strPtr("heroku/buildpacks:20"),
-				framework:          strPtr("myframework"),
+				sourcePath:         testutils.StrPtr("."),
+				image:              testutils.StrPtr("gcr.io/kubernetes/sample-app:latest"),
+				description:        testutils.StrPtr("a test"),
+				builder:            testutils.StrPtr("heroku/buildpacks:20"),
+				framework:          testutils.StrPtr("myframework"),
+				timeout:            testutils.StrPtr(""),
+				wait:               testutils.BoolPtr(false),
 				processes: &[]ketchv1.ProcessSpec{
 					{
 						Name:  "web",
 						Cmd:   []string{"python", "app.py"},
-						Units: intPtr(1),
+						Units: testutils.IntPtr(1),
 					},
 					{
 						Name:  "worker",
 						Cmd:   []string{"python", "app.py"},
-						Units: intPtr(2),
+						Units: testutils.IntPtr(2),
 					},
 				},
-				version: strPtr("v1"),
-				appType: strPtr("Application"),
+				version: testutils.StrPtr("v1"),
+				appType: testutils.StrPtr("Application"),
 				ketchYamlData: &ketchv1.KetchYamlData{
 					Hooks: &ketchv1.KetchYamlHooks{
 						Restart: ketchv1.KetchYamlRestartHooks{},
@@ -224,14 +232,17 @@ processes:
 framework: myframework
 image: gcr.io/kubernetes/sample-app:latest
 `,
+			options: &Options{},
 			changeSet: &ChangeSet{
 				appName:            "test",
-				appUnit:            intPtr(1),
+				appUnit:            testutils.IntPtr(1),
 				yamlStrictDecoding: true,
-				image:              strPtr("gcr.io/kubernetes/sample-app:latest"),
-				framework:          strPtr("myframework"),
-				version:            strPtr("v1"),
-				appType:            strPtr("Application"),
+				image:              testutils.StrPtr("gcr.io/kubernetes/sample-app:latest"),
+				framework:          testutils.StrPtr("myframework"),
+				version:            testutils.StrPtr("v1"),
+				appType:            testutils.StrPtr("Application"),
+				timeout:            testutils.StrPtr(""),
+				wait:               testutils.BoolPtr(false),
 			},
 		},
 	}
