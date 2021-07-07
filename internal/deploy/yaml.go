@@ -11,25 +11,25 @@ import (
 )
 
 type Application struct {
-	Version        string    `json:"version"` // TODO - store on ketchv1.App
-	Type           string    `json:"type"`    // TODO - determines App or Job
-	Name           string    `json:"name"`
-	Image          string    `json:"image"`
-	Framework      string    `json:"framework"`
-	Description    string    `json:"description"`
-	Environment    []string  `json:"environment"`
-	RegistrySecret string    `json:"registrySecret"`
-	Builder        string    `json:"builder"`
-	BuildPacks     []string  `json:"buildPacks"`
-	Processes      []Process `json:"processes"` // TODO
-	CName          CName     `json:"cname"`     // TODO
-	AppUnit        int       `json:"appUnit"`   // TODO
+	Version        *string    `json:"version"` // TODO - store on ketchv1.App
+	Type           *string    `json:"type"`    // TODO - determines App or Job
+	Name           *string    `json:"name"`
+	Image          *string    `json:"image"`
+	Framework      *string    `json:"framework"`
+	Description    *string    `json:"description"`
+	Environment    *[]string  `json:"environment"`
+	RegistrySecret *string    `json:"registrySecret"`
+	Builder        *string    `json:"builder"`
+	BuildPacks     *[]string  `json:"buildPacks"`
+	Processes      *[]Process `json:"processes"` // TODO
+	CName          *CName     `json:"cname"`     // TODO
+	AppUnit        *int       `json:"appUnit"`   // TODO
 }
 
 type Process struct {
 	Name  string `json:"name"`  // required
 	Cmd   string `json:"cmd"`   // required
-	Units int    `json:"units"` // unset? get from AppUnit
+	Units *int   `json:"units"` // unset? get from AppUnit
 	Ports []Port `json:"ports"` // appDeploymentSpec
 	Hooks []Hook `json:"hooks"`
 }
@@ -72,72 +72,79 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 		return nil, err
 	}
 	var envs []ketchv1.Env
-	for _, env := range application.Environment {
-		arr := strings.Split(env, "=")
-		if len(arr) != 2 {
-			continue
+	if application.Environment != nil {
+		for _, env := range *application.Environment {
+			arr := strings.Split(env, "=")
+			if len(arr) != 2 {
+				continue
+			}
+			envs = append(envs, ketchv1.Env{Name: arr[0], Value: arr[1]})
 		}
-		envs = append(envs, ketchv1.Env{Name: arr[0], Value: arr[1]})
 	}
 	// processes, hooks, ports
-	var processes []ketchv1.ProcessSpec
-	var beforeHooks []string
-	var afterHooks []string
-	ketchYamlProcessConfig := make(map[string]ketchv1.KetchYamlProcessConfig)
-	for i, process := range application.Processes {
-		processes = append(processes, ketchv1.ProcessSpec{
-			Name:  process.Name,
-			Cmd:   strings.Split(process.Cmd, " "),
-			Units: &application.Processes[i].Units,
-			Env:   envs,
-		})
-		for _, hook := range process.Hooks {
-			beforeHooks = append(beforeHooks, hook.Restart.Before)
-			afterHooks = append(afterHooks, hook.Restart.After)
-		}
-		var ports []ketchv1.KetchYamlProcessPortConfig
-		for _, port := range process.Ports {
-			ports = append(ports, ketchv1.KetchYamlProcessPortConfig{
-				Protocol:   port.Protocol,
-				Port:       port.Port,
-				TargetPort: port.TargetPort,
+	var processes *[]ketchv1.ProcessSpec
+	var ketchYamlData *ketchv1.KetchYamlData
+	if application.Processes != nil {
+		var beforeHooks []string
+		var afterHooks []string
+		ketchYamlProcessConfig := make(map[string]ketchv1.KetchYamlProcessConfig)
+		for i, process := range *application.Processes {
+			*processes = append(*processes, ketchv1.ProcessSpec{
+				Name:  process.Name,
+				Cmd:   strings.Split(process.Cmd, " "),
+				Units: (*application.Processes)[i].Units,
+				Env:   envs,
 			})
-		}
-		if len(process.Ports) > 0 {
-			ketchYamlProcessConfig[process.Name] = ketchv1.KetchYamlProcessConfig{
-				Ports: ports,
+			for _, hook := range process.Hooks {
+				beforeHooks = append(beforeHooks, hook.Restart.Before)
+				afterHooks = append(afterHooks, hook.Restart.After)
+			}
+			var ports []ketchv1.KetchYamlProcessPortConfig
+			for _, port := range process.Ports {
+				ports = append(ports, ketchv1.KetchYamlProcessPortConfig{
+					Protocol:   port.Protocol,
+					Port:       port.Port,
+					TargetPort: port.TargetPort,
+				})
+			}
+			if len(process.Ports) > 0 {
+				ketchYamlProcessConfig[process.Name] = ketchv1.KetchYamlProcessConfig{
+					Ports: ports,
+				}
 			}
 		}
-	}
 
-	// assign hooks and ports (kubernetes processconfig) to ketch yaml data
-	ketchYamlData := &ketchv1.KetchYamlData{
-		Hooks: &ketchv1.KetchYamlHooks{
-			Restart: ketchv1.KetchYamlRestartHooks{
-				Before: beforeHooks,
-				After:  afterHooks,
+		// assign hooks and ports (kubernetes processconfig) to ketch yaml data
+		ketchYamlData = &ketchv1.KetchYamlData{
+			Hooks: &ketchv1.KetchYamlHooks{
+				Restart: ketchv1.KetchYamlRestartHooks{
+					Before: beforeHooks,
+					After:  afterHooks,
+				},
 			},
-		},
-		Kubernetes: &ketchv1.KetchYamlKubernetesConfig{
-			Processes: ketchYamlProcessConfig,
-		},
+			Kubernetes: &ketchv1.KetchYamlKubernetesConfig{
+				Processes: ketchYamlProcessConfig,
+			},
+		}
 	}
 	c := &ChangeSet{
-		appName:              application.Name,
-		version:              &application.Version,
-		appType:              &application.Type,
+		appName:              *application.Name,
+		version:              application.Version,
+		appType:              application.Type,
 		yamlStrictDecoding:   true,
-		image:                &application.Image,
-		description:          &application.Description,
-		envs:                 &application.Environment,
-		framework:            &application.Framework,
-		dockerRegistrySecret: &application.RegistrySecret,
-		builder:              &application.Builder,
-		buildPacks:           &application.BuildPacks,
-		processes:            &processes,
+		image:                application.Image,
+		description:          application.Description,
+		envs:                 application.Environment,
+		framework:            application.Framework,
+		dockerRegistrySecret: application.RegistrySecret,
+		builder:              application.Builder,
+		buildPacks:           application.BuildPacks,
+		processes:            processes,
 		ketchYamlData:        ketchYamlData,
+		cname:                &ketchv1.CnameList{application.CName.DNSName},
 	}
 	c.applyDefaults()
+
 	return c, c.validate()
 }
 
@@ -152,9 +159,20 @@ func (c *ChangeSet) applyDefaults() {
 		c.appUnit = &defaultAppUnit
 	}
 	// building from source in PWD
-	if c.builder != nil {
+	if c.builder != nil && c.sourcePath == nil {
 		sourcePath := "."
 		c.sourcePath = &sourcePath
+	}
+	if c.processes != nil {
+		for i := range *c.processes {
+			if (*c.processes)[i].Units == nil {
+				if c.appUnit != nil {
+					(*c.processes)[i].Units = c.appUnit
+				} else {
+					(*c.processes)[i].Units = &defaultAppUnit
+				}
+			}
+		}
 	}
 }
 
@@ -167,6 +185,9 @@ func (c *ChangeSet) validate() error {
 	}
 	if c.appName == "" {
 		return errors.New("missing required field name")
+	}
+	if c.sourcePath == nil && c.processes != nil {
+		return errors.New("running defined processes require a sourcePath")
 	}
 	return nil
 }

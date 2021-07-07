@@ -17,6 +17,13 @@ func intPtr(i int) *int {
 	return &i
 }
 
+// TODO tests
+// defaults
+// units = appUNits
+// failed validations
+// cname
+// building from source prohibits processes
+
 func TestGetChangeSetFromYaml(t *testing.T) {
 	temp, err := os.CreateTemp("", "*.yaml")
 	require.Nil(t, err)
@@ -71,7 +78,7 @@ processes:
 				description:          strPtr("a test"),
 				envs:                 &[]string{"PORT=6666", "FOO=bar"},
 				framework:            strPtr("myframework"),
-				dockerRegistrySecret: strPtr(""),
+				dockerRegistrySecret: nil,
 				builder:              strPtr("heroku/buildpacks:20"),
 				buildPacks:           &[]string{"test-buildpack"},
 				processes: &[]ketchv1.ProcessSpec{
