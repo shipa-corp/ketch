@@ -232,7 +232,7 @@ func deployFromSource(ctx context.Context, svc *Services, app *ketchv1.App, para
 	}
 
 	var updateRequest updateAppCRDRequest
-
+	updateRequest.version = params.version
 	updateRequest.image = image
 	steps, _ := params.getSteps()
 	updateRequest.steps = steps
@@ -290,6 +290,7 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 	}
 
 	var updateRequest updateAppCRDRequest
+	updateRequest.version = params.version
 	updateRequest.image = image
 	steps, _ := params.getSteps()
 	updateRequest.steps = steps
@@ -332,6 +333,7 @@ func makeProcfile(cfg *registryv1.ConfigFile, procFileName string) (*chart.Procf
 }
 
 type updateAppCRDRequest struct {
+	version           *string
 	image             string
 	steps             int
 	stepWeight        uint8
@@ -350,6 +352,7 @@ func updateAppCRD(ctx context.Context, svc *Services, appName string, args updat
 		if err := svc.Client.Get(ctx, types.NamespacedName{Name: appName}, &updated); err != nil {
 			return errors.Wrap(err, "could not get app to deploy %q", appName)
 		}
+		updated.Spec.Version = args.version
 
 		processes := make([]ketchv1.ProcessSpec, 0, len(args.procFile.Processes))
 		for _, processName := range args.procFile.SortedNames() {
