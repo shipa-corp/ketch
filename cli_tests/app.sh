@@ -22,6 +22,10 @@ setup() {
   TEST_ENVVAR_VALUE="BAR"
 }
 
+teardown() {
+  rm -f app.yaml
+}
+
 @test "help" {
   result="$($KETCH help)"
   echo "RECEIVED:" $result
@@ -66,19 +70,63 @@ setup() {
   [[ $status -eq 0 ]]
 }
 
+@test "app deploy with yaml file" {
+  cat << EOF > app.yaml
+name: "$APP_NAME-2"
+version: v1
+type: Application
+image: "$APP_IMAGE"
+framework: "$FRAMEWORK"
+description: cli test app
+EOF
+  run $KETCH app deploy app.yaml
+  [[ $status -eq 0 ]]
+
+  # retry 5 times for "running" status
+  count=0
+  until [[ $count -ge 5 ]]
+  do
+    result=$($KETCH app info $APP_NAME-2)
+    if [[ $result =~ "running" ]]
+    then break
+    fi
+    count+=1
+    sleep 2
+  done
+
+  dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+running"
+  echo "RECEIVED:" $result
+  [[ $result =~ $dataRegex ]]
+  [[ $result =~ "Application: $APP_NAME-2" ]]
+  [[ $result =~ "Framework: $FRAMEWORK" ]]
+  [[ $result =~ "Version: v1" ]]
+  [[ $result =~ "Description: cli test app" ]]
+}
+
 @test "app list" {
   result=$($KETCH app list)
   headerRegex="NAME[ \t]+FRAMEWORK[ \t]+STATE[ \t]+ADDRESSES[ \t]+BUILDER[ \t]+DESCRIPTION"
-  dataRegex="$APP_NAME[ \t]+$FRAMEWORK[ \t]+(created|running)"
+  dataRegex="$APP_NAME[ \t]+$FRAMEWORK"
   echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   [[ $result =~ $dataRegex ]]
 }
 
 @test "app info" {
-  result=$($KETCH app info "$APP_NAME")
+  # retry 5 times for "running" status
+  count=0
+  until [[ $count -ge 5 ]]
+  do
+    result=$($KETCH app info $APP_NAME)
+    if [[ $result =~ "running" ]]
+    then break
+    fi
+    count+=1
+    sleep 2
+  done
+
   headerRegex="DEPLOYMENT VERSION[ \t]+IMAGE[ \t]+PROCESS NAME[ \t]+WEIGHT[ \t]+STATE[ \t]+CMD"
-  dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+created[ \t]"
+  dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+1 running[ \t]"
   echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   [[ $result =~ $dataRegex ]]
@@ -171,6 +219,12 @@ setup() {
 
 @test "app remove" {
   result=$($KETCH app remove "$APP_NAME")
+  echo "RECEIVED:" $result
+  [[ $result =~ "Successfully removed!" ]]
+}
+
+@test "app-2 remove" {
+  result=$($KETCH app remove "$APP_NAME-2")
   echo "RECEIVED:" $result
   [[ $result =~ "Successfully removed!" ]]
 }
