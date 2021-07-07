@@ -24,6 +24,7 @@ setup() {
 
 teardown() {
   rm -f app.yaml
+  rm -f framework.yaml
 }
 
 @test "help" {
@@ -40,10 +41,54 @@ teardown() {
   [[ $result =~ "Successfully added!" ]]
 }
 
-@test "framework list" {
+@test "framework add with yaml file" {
+  cat << EOF > framework.yaml
+name: "$FRAMEWORK-2"
+app-quota-limit: 1
+ingressController:
+  className: traefik
+  serviceEndpoint: 10.10.20.30
+  type: traefik
+EOF
+  result=$($KETCH framework add framework.yaml)
+  echo "RECEIVED:" $result
+  [[ $result =~ "Successfully added!" ]]
+
+  # retry 10 times for "Created" status
+  dataRegex="$FRAMEWORK-2[ \t]+Created[ \t]+ketch-$FRAMEWORK-2[ \t]+traefik[ \t]+traefik"
+  count=0
+  until [[ $count -ge 10 ]]
+  do
+    result=$($KETCH framework list)
+    if [[ $result =~ $dataRegex ]]
+    then break
+    fi
+    count+=1
+    sleep 2
+  done
   result=$($KETCH framework list)
+
+  echo "RECEIVED:" $result
+  [[ $result =~ $dataRegex ]]
+}
+
+@test "framework list" {
   headerRegex="NAME[ \t]+STATUS[ \t]+NAMESPACE[ \t]+INGRESS TYPE[ \t]+INGRESS CLASS NAME[ \t]+CLUSTER ISSUER[ \t]+APPS"
-  dataRegex="$FRAMEWORK[ \t]+ketch-$FRAMEWORK[ \t]+traefik[ \t]+traefik"
+  dataRegex="$FRAMEWORK[ \t]+Created[ \t]+ketch-$FRAMEWORK[ \t]+traefik[ \t]+traefik"
+
+  # retry 5 times
+  count=0
+  until [[ $count -ge 5 ]]
+  do
+    result=$($KETCH framework list)
+    if [[ $result =~ $dataRegex ]]
+    then break
+    fi
+    count+=1
+    sleep 2
+  done
+
+  result=$($KETCH framework list)
   echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   [[ $result =~ $dataRegex ]]
@@ -53,6 +98,46 @@ teardown() {
   result=$($KETCH framework update "$FRAMEWORK" --app-quota-limit 1)
   echo "RECEIVED:" $result
   [[ $result =~ "Successfully updated!" ]]
+}
+
+@test "framework export" {
+  run $KETCH framework export "$FRAMEWORK"
+  result=$(cat framework.yaml)
+  echo "RECEIVED:" $result
+  [[ $result =~ "name: $FRAMEWORK" ]]
+  [[ $result =~ "namespace: ketch-$FRAMEWORK" ]]
+  [[ $result =~ "appQuotaLimit: 1" ]]
+  rm -f framework.yaml
+}
+
+@test "framework update with yaml file" {
+  cat << EOF > framework.yaml
+name: "$FRAMEWORK-2"
+app-quota-limit: 2
+ingressController:
+  className: istio
+  serviceEndpoint: 10.10.20.30
+  type: istio
+EOF
+  result=$($KETCH framework update framework.yaml)
+  echo "RECEIVED:" $result
+  [[ $result =~ "Successfully updated!" ]]
+
+  # retry 10 times for "Created" status
+  dataRegex="$FRAMEWORK-2[ \t]+Created[ \t]+ketch-$FRAMEWORK-2[ \t]+istio[ \t]+istio"
+  count=0
+  until [[ $count -ge 10 ]]
+  do
+    result=$($KETCH framework list)
+    if [[ $result =~ $dataRegex ]]
+    then break
+    fi
+    count+=1
+    sleep 2
+  done
+  result=$($KETCH framework list)
+  echo "RECEIVED:" $result
+  [[ $result =~ $dataRegex ]]
 }
 
 @test "framework export" {
@@ -113,9 +198,9 @@ EOF
 }
 
 @test "app info" {
-  # retry 5 times for "running" status
+  # retry 10 times for "running" status
   count=0
-  until [[ $count -ge 5 ]]
+  until [[ $count -ge 10 ]]
   do
     result=$($KETCH app info $APP_NAME)
     if [[ $result =~ "running" ]]
@@ -231,6 +316,12 @@ EOF
 
 @test "framework remove" {
   result=$(echo "ketch-$FRAMEWORK" | $KETCH framework remove "$FRAMEWORK")
+  echo "RECEIVED:" $result
+  [[ $result =~ "Framework successfully removed!" ]]
+}
+
+@test "framework-2 remove" {
+  result=$(echo "ketch-$FRAMEWORK-2" | $KETCH framework remove "$FRAMEWORK-2")
   echo "RECEIVED:" $result
   [[ $result =~ "Framework successfully removed!" ]]
 }

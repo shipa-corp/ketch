@@ -2,24 +2,34 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/thediveo/enumflag"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/yaml"
 
 	ketchv1 "github.com/shipa-corp/ketch/internal/api/v1beta1"
+	"github.com/shipa-corp/ketch/internal/validation"
 )
 
 const frameworkUpdateHelp = `
-Update a framework.
+Update a framework. Users can specify an existing framework by name and command-line flags or
+by passing a filename such as framework.yaml containing fields like:
+	name: framework1
+	ingressController:
+	  name: istio
+	  endpoint: 10.10.10.20 # load balancer ingress ip
+	  type: istio
 `
 
 func newFrameworkUpdateCmd(cfg config, out io.Writer) *cobra.Command {
 	options := frameworkUpdateOptions{}
 	cmd := &cobra.Command{
-		Use:   "update FRAMEWORK",
+		Use:   "update [FRAMEWORK|FILENAME]",
 		Args:  cobra.ExactValidArgs(1),
 		Short: "Update a framework.",
 		Long:  frameworkUpdateHelp,
@@ -67,12 +77,78 @@ type frameworkUpdateOptions struct {
 }
 
 func frameworkUpdate(ctx context.Context, cfg config, options frameworkUpdateOptions, out io.Writer) error {
-	framework := ketchv1.Framework{}
+	var framework *ketchv1.Framework
+	var err error
+	switch {
+	case validation.ValidateYamlFilename(options.name):
+		framework, err = updateFrameworkFromYaml(ctx, cfg, options)
+		if err != nil {
+			return err
+		}
+	case validation.ValidateName(options.name):
+		framework, err = updateFrameworkFromArgs(ctx, cfg, options)
+		if err != nil {
+			return err
+		}
+	default:
+		return ErrInvalidFrameworkName
+	}
+
+	if len(framework.Spec.IngressController.ClusterIssuer) > 0 {
+		exists, err := clusterIssuerExist(cfg.DynamicClient(), ctx, framework.Spec.IngressController.ClusterIssuer)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return ErrClusterIssuerNotFound
+		}
+	}
+
+	if err := cfg.Client().Update(ctx, framework); err != nil {
+		return fmt.Errorf("failed to update the framework: %w", err)
+	}
+	fmt.Fprintln(out, "Successfully updated!")
+	return nil
+}
+
+// updateFrameworkFromYaml imports a FrameworkSpec definition from a yaml file named in options.name.
+// It asserts that the framework has a name. It assigns a ketch-prefixed namespaceName, version, appQuotaLimit,
+// ingressController className, and ingressController type (defaulting to traefik) if values are not specified.
+// It fetches the named Framework, assigns the FrameworkSpec, and returns the Framework.
+func updateFrameworkFromYaml(ctx context.Context, cfg config, options frameworkUpdateOptions) (*ketchv1.Framework, error) {
+	var spec ketchv1.FrameworkSpec
+	b, err := os.ReadFile(options.name)
+	if err != nil {
+		return nil, err
+	}
+
+	err = yaml.Unmarshal(b, &spec)
+	if err != nil {
+		return nil, err
+	}
+	if len(spec.Name) == 0 {
+		return nil, errors.New("a framework name is required")
+	}
+
+	var framework ketchv1.Framework
+	if err := cfg.Client().Get(ctx, types.NamespacedName{Name: spec.Name}, &framework); err != nil {
+		return nil, fmt.Errorf("failed to get the framework: %w", err)
+	}
+	framework.Spec = spec
+
+	assignDefaultsToFramework(&framework)
+
+	return &framework, nil
+}
+
+// updateFrameworkFromArgs fetches the named Framework, updates a Framework.Spec from options, and returns the Framework.
+func updateFrameworkFromArgs(ctx context.Context, cfg config, options frameworkUpdateOptions) (*ketchv1.Framework, error) {
+	var framework ketchv1.Framework
 	if err := cfg.Client().Get(ctx, types.NamespacedName{Name: options.name}, &framework); err != nil {
-		return fmt.Errorf("failed to get the framework: %w", err)
+		return nil, fmt.Errorf("failed to get the framework: %w", err)
 	}
 	if options.appQuotaLimitSet {
-		framework.Spec.AppQuotaLimit = options.appQuotaLimit
+		framework.Spec.AppQuotaLimit = &options.appQuotaLimit
 	}
 	if options.namespaceSet {
 		framework.Spec.NamespaceName = options.namespace
@@ -87,18 +163,7 @@ func frameworkUpdate(ctx context.Context, cfg config, options frameworkUpdateOpt
 		framework.Spec.IngressController.IngressType = options.ingressType.ingressControllerType()
 	}
 	if options.ingressClusterIssuerSet {
-		exists, err := clusterIssuerExist(cfg.DynamicClient(), ctx, options.ingressClusterIssuer)
-		if err != nil {
-			return err
-		}
-		if !exists {
-			return ErrClusterIssuerNotFound
-		}
 		framework.Spec.IngressController.ClusterIssuer = options.ingressClusterIssuer
 	}
-	if err := cfg.Client().Update(ctx, &framework); err != nil {
-		return fmt.Errorf("failed to update the framework: %w", err)
-	}
-	fmt.Fprintln(out, "Successfully updated!")
-	return nil
+	return &framework, nil
 }

@@ -50,8 +50,8 @@ func generateFrameworkListOutput(frameworks ketchv1.FrameworkList) []frameworkLi
 	var output []frameworkListOutput
 	for _, item := range frameworks.Items {
 		apps := fmt.Sprintf("%d", len(item.Status.Apps))
-		if item.Spec.AppQuotaLimit > 0 {
-			apps = fmt.Sprintf("%d/%d", len(item.Status.Apps), item.Spec.AppQuotaLimit)
+		if item.Spec.AppQuotaLimit != nil && *item.Spec.AppQuotaLimit > 0 {
+			apps = fmt.Sprintf("%d/%d", len(item.Status.Apps), *item.Spec.AppQuotaLimit)
 		}
 		output = append(output, frameworkListOutput{
 			Name:             item.Name,

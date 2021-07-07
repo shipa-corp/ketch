@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/shipa-corp/ketch/internal/testutils"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -168,7 +170,7 @@ func TestFramework_ValidateUpdate(t *testing.T) {
 			name: "everything is ok",
 			framework: Framework{
 				ObjectMeta: metav1.ObjectMeta{Name: "framework-1"},
-				Spec:       FrameworkSpec{NamespaceName: "ketch-namespace", AppQuotaLimit: 2},
+				Spec:       FrameworkSpec{NamespaceName: "ketch-namespace", AppQuotaLimit: testutils.IntPtr(2)},
 			},
 			client: &mocks.MockClient{
 				OnList: func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
@@ -188,7 +190,7 @@ func TestFramework_ValidateUpdate(t *testing.T) {
 			name: "failed to descrease quota",
 			framework: Framework{
 				ObjectMeta: metav1.ObjectMeta{Name: "framework-1"},
-				Spec:       FrameworkSpec{NamespaceName: "ketch-namespace", AppQuotaLimit: 1},
+				Spec:       FrameworkSpec{NamespaceName: "ketch-namespace", AppQuotaLimit: testutils.IntPtr(1)},
 				Status: FrameworkStatus{
 					Apps: []string{"app-1", "app-2"},
 				},
@@ -204,7 +206,7 @@ func TestFramework_ValidateUpdate(t *testing.T) {
 				},
 			},
 			old: &Framework{
-				Spec: FrameworkSpec{NamespaceName: "ketch-namespace", AppQuotaLimit: 5},
+				Spec: FrameworkSpec{NamespaceName: "ketch-namespace", AppQuotaLimit: testutils.IntPtr(5)},
 				Status: FrameworkStatus{
 					Apps: []string{"app-1", "app-2"},
 				},

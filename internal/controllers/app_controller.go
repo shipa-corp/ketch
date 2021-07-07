@@ -168,7 +168,7 @@ func (r *AppReconciler) reconcile(ctx context.Context, app *ketchv1.App) reconci
 			message: fmt.Sprintf(`failed to read configmap with the app's chart templates: %v`, err),
 		}
 	}
-	if !framework.HasApp(app.Name) && len(framework.Status.Apps) >= framework.Spec.AppQuotaLimit && framework.Spec.AppQuotaLimit != -1 {
+	if !framework.HasApp(app.Name) && framework.Spec.AppQuotaLimit != nil && len(framework.Status.Apps) >= *framework.Spec.AppQuotaLimit && *framework.Spec.AppQuotaLimit != -1 {
 		return reconcileResult{
 			status:  v1.ConditionFalse,
 			message: fmt.Sprintf(`you have reached the limit of apps`),

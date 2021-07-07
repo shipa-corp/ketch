@@ -11,7 +11,7 @@ import (
 
 var (
 	nameRegexp         = regexp.MustCompile(`^[a-z][a-z0-9-]{0,39}$`)
-	yamlFilenameRegexp = regexp.MustCompile(`^[A-Za-z0-9-_\/\.]{1,255}\.(yaml|yml)$`)
+	yamlFilenameRegexp = regexp.MustCompile(`.*\.(yaml|yml)$`)
 )
 
 // Error represents the package's Error type that is returned by Validate* functions.

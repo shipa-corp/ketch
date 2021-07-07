@@ -55,10 +55,11 @@ type FrameworkList struct {
 type FrameworkSpec struct {
 	Version string `json:"version,omitempty"`
 	Name    string `json:"name"`
+
 	// +kubebuilder:validation:MinLength=1
 	NamespaceName string `json:"namespace"`
 
-	AppQuotaLimit int `json:"appQuotaLimit"`
+	AppQuotaLimit *int `json:"appQuotaLimit"`
 
 	IngressController IngressControllerSpec `json:"ingressController,omitempty"`
 }

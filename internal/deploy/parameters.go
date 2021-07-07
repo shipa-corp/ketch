@@ -254,7 +254,7 @@ func (c *ChangeSet) getStepWeight() (uint8, error) {
 	if err != nil {
 		return 0, err
 	}
-	return uint8(steps / maximumSteps), nil
+	return uint8(100 / steps), nil
 }
 
 func (c *ChangeSet) getEnvironments() ([]ketchv1.Env, error) {

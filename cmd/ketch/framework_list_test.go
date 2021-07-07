@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/shipa-corp/ketch/internal/testutils"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -21,7 +23,7 @@ func Test_frameworkList(t *testing.T) {
 		},
 		Spec: ketchv1.FrameworkSpec{
 			NamespaceName: "a",
-			AppQuotaLimit: 30,
+			AppQuotaLimit: testutils.IntPtr(30),
 			IngressController: ketchv1.IngressControllerSpec{
 				ClassName:       "istio",
 				ServiceEndpoint: "192.168.1.17",
@@ -37,7 +39,7 @@ func Test_frameworkList(t *testing.T) {
 		},
 		Spec: ketchv1.FrameworkSpec{
 			NamespaceName: "b",
-			AppQuotaLimit: 30,
+			AppQuotaLimit: testutils.IntPtr(30),
 			IngressController: ketchv1.IngressControllerSpec{
 				ClassName:       "classname-b",
 				ServiceEndpoint: "192.168.1.17",

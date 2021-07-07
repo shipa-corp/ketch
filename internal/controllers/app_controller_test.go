@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shipa-corp/ketch/internal/testutils"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/release"
@@ -59,7 +61,7 @@ func TestAppReconciler_Reconcile(t *testing.T) {
 			},
 			Spec: ketchv1.FrameworkSpec{
 				NamespaceName: "hello",
-				AppQuotaLimit: 100,
+				AppQuotaLimit: testutils.IntPtr(100),
 				IngressController: ketchv1.IngressControllerSpec{
 					IngressType: ketchv1.IstioIngressControllerType,
 				},
@@ -71,7 +73,7 @@ func TestAppReconciler_Reconcile(t *testing.T) {
 			},
 			Spec: ketchv1.FrameworkSpec{
 				NamespaceName: "second-namespace",
-				AppQuotaLimit: 1,
+				AppQuotaLimit: testutils.IntPtr(1),
 				IngressController: ketchv1.IngressControllerSpec{
 					IngressType: ketchv1.IstioIngressControllerType,
 				},

@@ -33,10 +33,10 @@ Install latest at /usr/local/bin default location
 curl -s https://raw.githubusercontent.com/shipa-corp/ketch/main/install.sh | bash
 ```
 
-Alternatively, you can install specific tag at a target location, for example command below installs ketch version v0.3.0 in current directory:
+Alternatively, you can install specific tag at a target location, for example command below installs ketch version v0.3.1 in current directory:
 
 ```bash
-curl -s https://raw.githubusercontent.com/shipa-corp/ketch/main/install.sh | INSTALL_DIR=. TAG=v0.3.0  bash
+curl -s https://raw.githubusercontent.com/shipa-corp/ketch/main/install.sh | INSTALL_DIR=. TAG=v0.3.1  bash
 ```
 
 
@@ -69,7 +69,7 @@ kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/relea
 ```
 ### Install Ketch controller.
 ```bash
-kubectl apply -f https://github.com/shipa-corp/ketch/releases/download/v0.3.0/ketch-controller.yaml
+kubectl apply -f https://github.com/shipa-corp/ketch/releases/download/v0.3.1/ketch-controller.yaml
 ```
 
 Thats it!
