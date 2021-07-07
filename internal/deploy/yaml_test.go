@@ -245,6 +245,17 @@ image: gcr.io/kubernetes/sample-app:latest
 				wait:               testutils.BoolPtr(false),
 			},
 		},
+		{
+			description: "error - malformed envvar",
+			yaml: `name: test
+framework: myframework
+image: gcr.io/kubernetes/sample-app:latest
+environment:
+  - bad:variable
+`,
+			options: &Options{},
+			errStr:  errEnvvarFormat.Error(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {

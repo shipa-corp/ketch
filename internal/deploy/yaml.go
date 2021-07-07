@@ -60,6 +60,8 @@ var (
 	defaultAppUnit  = 1
 	typeApplication = "Application"
 	typeJob         = "Job"
+
+	errEnvvarFormat = errors.New("environment variables should be in the format - name=value")
 )
 
 // GetChangeSetFromYaml reads an application.yaml file and returns a ChangeSet
@@ -80,7 +82,7 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 		for _, env := range *application.Environment {
 			arr := strings.Split(env, "=")
 			if len(arr) != 2 {
-				continue
+				return nil, errEnvvarFormat
 			}
 			envs = append(envs, ketchv1.Env{Name: arr[0], Value: arr[1]})
 		}
@@ -119,6 +121,8 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 		}
 
 		// assign hooks and ports (kubernetes processConfig) to ketch yaml data
+		// NOTE: there is a disparity in that the yaml file format implies that hooks and ports
+		// are per-process, while the AppSpec makes them per-deployment.
 		ketchYamlData = ketchv1.KetchYamlData{
 			Hooks: &ketchv1.KetchYamlHooks{
 				Restart: ketchv1.KetchYamlRestartHooks{
