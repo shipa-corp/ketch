@@ -63,7 +63,7 @@ EOF
 @test "framework list" {
   result=$($KETCH framework list)
   headerRegex="NAME[ \t]+STATUS[ \t]+NAMESPACE[ \t]+INGRESS TYPE[ \t]+INGRESS CLASS NAME[ \t]+CLUSTER ISSUER[ \t]+APPS"
-  dataRegex="$FRAMEWORK[ \t]+ketch-$FRAMEWORK[ \t]+traefik[ \t]+traefik"
+  dataRegex="$FRAMEWORK[ \t]+[Created \t]+ketch-$FRAMEWORK[ \t]+traefik[ \t]+traefik"
 
 
   echo "RECEIVED:" $result
@@ -72,7 +72,7 @@ EOF
 }
 
 @test "framework update" {
-  result=$($KETCH framework update "$FRAMEWORK" --app-quota-limit 1)
+  result=$($KETCH framework update "$FRAMEWORK" --app-quota-limit 2)
   echo "RECEIVED:" $result
   [[ $result =~ "Successfully updated!" ]]
 }
@@ -100,7 +100,7 @@ EOF
   echo "RECEIVED:" $result
 
   result=$($KETCH framework list)
-  dataRegex="$FRAMEWORK-2[ \t]+ketch-$FRAMEWORK-2[ \t]+istio[ \t]+istio"
+  dataRegex="$FRAMEWORK-2[ \t]+[Created \t]+ketch-$FRAMEWORK-2[ \t]+istio[ \t]+istio"
   echo "RECEIVED:" $result
   [[ $result =~ $dataRegex ]]
 }
@@ -132,7 +132,7 @@ EOF
   run $KETCH app deploy app.yaml
   [[ $status -eq 0 ]]
 
-  # retry 5 times for "running" status
+  # retry for "running" status
   count=0
   until [[ $count -ge 20 ]]
   do
@@ -144,7 +144,7 @@ EOF
     sleep 3
   done
 
-  dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+running"
+  dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+1 running"
   result=$($KETCH app info $APP_NAME-2)
   echo "RECEIVED:" $result
   [[ $result =~ $dataRegex ]]
@@ -164,7 +164,7 @@ EOF
 }
 
 @test "app info" {
-  # retry 10 times for "running" status
+  # retry for "running" status
   count=0
   until [[ $count -ge 20 ]]
   do
