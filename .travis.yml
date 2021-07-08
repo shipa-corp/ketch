@@ -41,4 +41,4 @@ jobs:
         - bash cli_tests/install_minikube.sh
         - bash cli_tests/install_bats.sh
         - bash cli_tests/install_ketch.sh
-        - bats cli_tests/app.sh
+        - go test ./... -tags integration
