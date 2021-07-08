@@ -36,6 +36,8 @@ jobs:
       services:
         - docker
       provider: script
+      env:
+        - KETCH_EXECUTABLE_PATH=$(pwd)/bin/ketch
       script:
         - bash cli_tests/install_kubectl.sh
         - bash cli_tests/install_minikube.sh
