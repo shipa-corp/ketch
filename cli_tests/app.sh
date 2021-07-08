@@ -147,7 +147,7 @@ EOF
 @test "app list" {
   result=$($KETCH app list)
   headerRegex="NAME[ \t]+FRAMEWORK[ \t]+STATE[ \t]+ADDRESSES[ \t]+BUILDER[ \t]+DESCRIPTION"
-  dataRegex="$APP_NAME[ \t]+$FRAMEWORK[\t]+(created|running)"
+  dataRegex="$APP_NAME[ \t]+$FRAMEWORK[ \t]+(created|running)"
   echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   [[ $result =~ $dataRegex ]]
