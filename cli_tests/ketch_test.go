@@ -160,8 +160,8 @@ func TestAppInfo(t *testing.T) {
 
 	b, err := cmd.Output()
 	require.Nil(t, err, string(b))
-	require.True(t, regexp.MustCompile("DEPLOYMENT VERSION[ \t]+IMAGE[ \t]+PROCESS NAME[ \t]+WEIGHT[ \t]+STATE[ \t]+CMD").Match(b))
-	require.True(t, regexp.MustCompile(fmt.Sprintf("1[ \t]+%s[ \t]+web[ \t]+100%%[ \t]+1 running[ \t]", appImage)).Match(b))
+	require.True(t, regexp.MustCompile("DEPLOYMENT VERSION[ \t]+IMAGE[ \t]+PROCESS NAME[ \t]+WEIGHT[ \t]+STATE[ \t]+CMD").Match(b), string(b))
+	require.True(t, regexp.MustCompile(fmt.Sprintf("1[ \t]+%s[ \t]+web[ \t]+100%%[ \t]+[0-9] running[ \t]", appImage)).Match(b), string(b))
 }
 
 func TestAppStop(t *testing.T) {
@@ -201,7 +201,7 @@ func TestUnitAdd(t *testing.T) {
 	require.Nil(t, err)
 	b, err := exec.Command("kubectl", "describe", "apps", appName).CombinedOutput()
 	require.Nil(t, err)
-	require.True(t, regexp.MustCompile("Units: 3").Match(b), string(b))
+	require.True(t, regexp.MustCompile("Units:[ \t]+2").Match(b), string(b))
 }
 
 func TestUnitRemove(t *testing.T) {
@@ -209,7 +209,7 @@ func TestUnitRemove(t *testing.T) {
 	require.Nil(t, err)
 	b, err := exec.Command("kubectl", "describe", "apps", appName).CombinedOutput()
 	require.Nil(t, err)
-	require.True(t, regexp.MustCompile("Units: 2").Match(b), string(b))
+	require.True(t, regexp.MustCompile("Units:[ \t]+1").Match(b), string(b))
 }
 
 func TestUnitSet(t *testing.T) {
@@ -217,11 +217,27 @@ func TestUnitSet(t *testing.T) {
 	require.Nil(t, err)
 	b, err := exec.Command("kubectl", "describe", "apps", appName).CombinedOutput()
 	require.Nil(t, err)
-	require.True(t, regexp.MustCompile("Units: 3").Match(b), string(b))
+	require.True(t, regexp.MustCompile("Units: [ \t]+").Match(b), string(b))
 }
-func TestEnvSet(t *testing.T)   {}
-func TestEnvGet(t *testing.T)   {}
-func TestEnvUnset(t *testing.T) {}
+
+func TestEnvSet(t *testing.T) {
+	err := exec.Command(ketch, "env", "set", fmt.Sprintf("%s=%s", testEnvvarKey, testEnvVarValue), "--app", appName).Run()
+	require.Nil(t, err)
+}
+
+func TestEnvGet(t *testing.T) {
+	b, err := exec.Command(ketch, "env", "get", testEnvvarKey, "--app", appName).CombinedOutput()
+	require.Nil(t, err)
+	require.Contains(t, string(b), testEnvVarValue, string(b))
+}
+
+func TestEnvUnset(t *testing.T) {
+	err := exec.Command(ketch, "env", "unset", testEnvvarKey, "--app", appName).Run()
+	require.Nil(t, err)
+	b, err := exec.Command(ketch, "env", "get", testEnvvarKey, "--app", appName).CombinedOutput()
+	require.Nil(t, err)
+	require.NotContainsf(t, string(b), testEnvVarValue, string(b))
+}
 
 func TestAppRemove(t *testing.T) {
 	b, err := exec.Command(ketch, "app", "remove", appName).CombinedOutput()
