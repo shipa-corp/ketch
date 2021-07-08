@@ -116,15 +116,10 @@ func getUpdatedApp(ctx context.Context, client Client, cs *ChangeSet) (*ketchv1.
 		app = a
 
 		if cs.sourcePath != nil {
-			// processes exist in params (e.g. from yaml file); write Procfile locally
-			if cs.processes != nil {
-				err = chart.WriteProcfile(*cs.processes, path.Join(*cs.sourcePath, defaultProcFile))
-				if err != nil {
+			if cs.processes == nil {
+				if err := validateSourceDeploy(cs); err != nil {
 					return err
 				}
-			}
-			if err := validateSourceDeploy(cs); err != nil {
-				return err
 			}
 			builder := cs.getBuilder(app.Spec)
 			if builder != app.Spec.Builder {
@@ -226,7 +221,12 @@ func deployFromSource(ctx context.Context, svc *Services, app *ketchv1.App, para
 		return err
 	}
 
-	procfile, err := chart.NewProcfile(path.Join(sourcePath, defaultProcFile))
+	var procfile *chart.Procfile
+	if params.processes == nil {
+		procfile, err = chart.NewProcfile(path.Join(sourcePath, defaultProcFile))
+	} else {
+		procfile, err = chart.ProcfileFromProcesses(*params.processes)
+	}
 	if err != nil {
 		return err
 	}
@@ -284,11 +284,10 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 		return err
 	}
 
-	procfile, err := makeProcfile(imgConfig, "")
+	procfile, err := makeProcfile(imgConfig)
 	if err != nil {
 		return err
 	}
-
 	var updateRequest updateAppCRDRequest
 	updateRequest.version = params.version
 	updateRequest.image = image
@@ -303,7 +302,6 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 	updateRequest.stepTimeInterval = interval
 	updateRequest.nextScheduledTime = time.Now().Add(interval)
 	updateRequest.started = time.Now()
-	updateRequest.processes = params.processes
 
 	if app, err = updateAppCRD(ctx, svc, params.appName, updateRequest); err != nil {
 		return errors.Wrap(err, "deploy from image failed")
@@ -318,7 +316,7 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 	return nil
 }
 
-func makeProcfile(cfg *registryv1.ConfigFile, procFileName string) (*chart.Procfile, error) {
+func makeProcfile(cfg *registryv1.ConfigFile) (*chart.Procfile, error) {
 	// no procfile (not building from source)
 	cmds := append(cfg.Config.Entrypoint, cfg.Config.Cmd...)
 	if len(cmds) == 0 {

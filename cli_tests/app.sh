@@ -54,41 +54,18 @@ EOF
   echo "RECEIVED:" $result
   [[ $result =~ "Successfully added!" ]]
 
-  # retry 10 times for "Created" status
-  dataRegex="$FRAMEWORK-2[ \t]+Created[ \t]+ketch-$FRAMEWORK-2[ \t]+traefik[ \t]+traefik"
-  count=0
-  until [[ $count -ge 10 ]]
-  do
-    result=$($KETCH framework list)
-    if [[ $result =~ $dataRegex ]]
-    then break
-    fi
-    count+=1
-    sleep 2
-  done
   result=$($KETCH framework list)
-
+  dataRegex="$FRAMEWORK-2[ \t]+ketch-$FRAMEWORK-2[ \t]+traefik[ \t]+traefik"
   echo "RECEIVED:" $result
   [[ $result =~ $dataRegex ]]
 }
 
 @test "framework list" {
-  headerRegex="NAME[ \t]+STATUS[ \t]+NAMESPACE[ \t]+INGRESS TYPE[ \t]+INGRESS CLASS NAME[ \t]+CLUSTER ISSUER[ \t]+APPS"
-  dataRegex="$FRAMEWORK[ \t]+Created[ \t]+ketch-$FRAMEWORK[ \t]+traefik[ \t]+traefik"
-
-  # retry 5 times
-  count=0
-  until [[ $count -ge 5 ]]
-  do
-    result=$($KETCH framework list)
-    if [[ $result =~ $dataRegex ]]
-    then break
-    fi
-    count+=1
-    sleep 2
-  done
-
   result=$($KETCH framework list)
+  headerRegex="NAME[ \t]+STATUS[ \t]+NAMESPACE[ \t]+INGRESS TYPE[ \t]+INGRESS CLASS NAME[ \t]+CLUSTER ISSUER[ \t]+APPS"
+  dataRegex="$FRAMEWORK[ \t]+ketch-$FRAMEWORK[ \t]+traefik[ \t]+traefik"
+
+
   echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   [[ $result =~ $dataRegex ]]
@@ -121,21 +98,9 @@ ingressController:
 EOF
   result=$($KETCH framework update framework.yaml)
   echo "RECEIVED:" $result
-  [[ $result =~ "Successfully updated!" ]]
 
-  # retry 10 times for "Created" status
-  dataRegex="$FRAMEWORK-2[ \t]+Created[ \t]+ketch-$FRAMEWORK-2[ \t]+istio[ \t]+istio"
-  count=0
-  until [[ $count -ge 10 ]]
-  do
-    result=$($KETCH framework list)
-    if [[ $result =~ $dataRegex ]]
-    then break
-    fi
-    count+=1
-    sleep 2
-  done
   result=$($KETCH framework list)
+  dataRegex="$FRAMEWORK-2[ \t]+ketch-$FRAMEWORK-2[ \t]+istio[ \t]+istio"
   echo "RECEIVED:" $result
   [[ $result =~ $dataRegex ]]
 }
@@ -173,13 +138,14 @@ EOF
   do
     result=$($KETCH app info $APP_NAME-2)
     if [[ $result =~ "running" ]]
-    then break
+      then break
     fi
     count+=1
     sleep 2
   done
 
   dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+running"
+  result=$($KETCH app info $APP_NAME-2)
   echo "RECEIVED:" $result
   [[ $result =~ $dataRegex ]]
   [[ $result =~ "Application: $APP_NAME-2" ]]
@@ -204,14 +170,15 @@ EOF
   do
     result=$($KETCH app info $APP_NAME)
     if [[ $result =~ "running" ]]
-    then break
+      then break
     fi
     count+=1
-    sleep 2
+    sleep 3
   done
 
   headerRegex="DEPLOYMENT VERSION[ \t]+IMAGE[ \t]+PROCESS NAME[ \t]+WEIGHT[ \t]+STATE[ \t]+CMD"
   dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+1 running[ \t]"
+  result=$($KETCH app info $APP_NAME)
   echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   [[ $result =~ $dataRegex ]]
