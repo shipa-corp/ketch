@@ -38,6 +38,10 @@ func init() {
 
 	// set ketch executable path
 	ketchExecPath := os.Getenv("KETCH_EXECUTABLE_PATH")
+	fmt.Println("EXEC PATH", ketchExecPath) // TODO
+	pwd, _ := os.Getwd()
+	fmt.Println(pwd)
+	fmt.Println(os.Stat(pwd))
 	if ketchExecPath != "" {
 		ketch = ketchExecPath
 		return
