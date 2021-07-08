@@ -134,14 +134,14 @@ EOF
 
   # retry 5 times for "running" status
   count=0
-  until [[ $count -ge 5 ]]
+  until [[ $count -ge 20 ]]
   do
     result=$($KETCH app info $APP_NAME-2)
     if [[ $result =~ "running" ]]
       then break
     fi
     count+=1
-    sleep 2
+    sleep 3
   done
 
   dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+running"
@@ -166,7 +166,7 @@ EOF
 @test "app info" {
   # retry 10 times for "running" status
   count=0
-  until [[ $count -ge 10 ]]
+  until [[ $count -ge 20 ]]
   do
     result=$($KETCH app info $APP_NAME)
     if [[ $result =~ "running" ]]
