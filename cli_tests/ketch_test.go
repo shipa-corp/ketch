@@ -19,12 +19,13 @@ var (
 	ketch   string // ketch executable path
 	ingress string // ingress IP
 
-	framework       = "myframework"
-	appImage        = "gcr.io/shipa-ci/sample-go-app:latest"
-	appName         = "sample-app"
-	cName           = "my-cname.com"
-	testEnvvarKey   = "FOO"
-	testEnvVarValue = "BAR"
+	frameworkCliName  = "myframework"
+	frameworkYamlName = "myframework-yaml"
+	appImage          = "gcr.io/shipa-ci/sample-go-app:latest"
+	appName           = "sample-app"
+	cName             = "my-cname.com"
+	testEnvvarKey     = "FOO"
+	testEnvVarValue   = "BAR"
 )
 
 func init() {
@@ -81,14 +82,41 @@ func TestHelp(t *testing.T) {
 	require.Contains(t, string(b), "Flags")
 }
 
-func TestFrameworkAdd(t *testing.T) {
-	b, err := exec.Command(ketch, "framework", "add", framework, "--ingress-service-endpoint", ingress, "--ingress-type", "traefik").Output()
+func TestFrameworkAddByCLI(t *testing.T) {
+	b, err := exec.Command(ketch, "framework", "add", frameworkCliName, "--ingress-service-endpoint", ingress, "--ingress-type", "traefik").Output()
 	require.Nil(t, err)
 	require.Contains(t, string(b), "Successfully added!")
 }
 
+func TestFrameworkList(t *testing.T) {
+	b, err := exec.Command(ketch, "framework", "list").Output()
+	require.Nil(t, err)
+	require.True(t, regexp.MustCompile("NAME[ \t]+STATUS[ \t]+NAMESPACE[ \t]+INGRESS TYPE[ \t]+INGRESS CLASS NAME[ \t]+CLUSTER ISSUER[ \t]+APPS").Match(b), string(b))
+	require.True(t, regexp.MustCompile(fmt.Sprintf("%s[ \t]+[Created \t]+ketch-%s[ \t]+traefik[ \t]+traefik", frameworkCliName, frameworkCliName)).Match(b), string(b))
+}
+
+func TestFrameworkAddByYaml(t *testing.T) {
+	temp, err := os.CreateTemp(t.TempDir(), "*.yaml")
+	require.Nil(t, err)
+	defer os.Remove(temp.Name())
+	temp.WriteString(fmt.Sprintf(`name: %s
+app-quota-limit: 1
+ingressController:
+  className: traefik
+  serviceEndpoint: %s
+  type: traefik`, frameworkYamlName, ingress))
+
+	b, err := exec.Command(ketch, "framework", "add", temp.Name()).CombinedOutput()
+	require.Nil(t, err, string(b))
+	require.Contains(t, string(b), "Successfully added!")
+
+	b, err = exec.Command(ketch, "framework", "list").Output()
+	require.Nil(t, err)
+	require.True(t, regexp.MustCompile(fmt.Sprintf("%s[ \t]+[Created \t]+ketch-%s[ \t]+traefik[ \t]+traefik", frameworkYamlName, frameworkYamlName)).Match(b), string(b))
+}
+
 func TestAppDeploy(t *testing.T) {
-	b, err := exec.Command(ketch, "app", "deploy", appName, "--framework", framework, "-i", appImage).Output()
+	b, err := exec.Command(ketch, "app", "deploy", appName, "--framework", frameworkCliName, "-i", appImage).Output()
 	require.Nil(t, err)
 	require.Equal(t, "", string(b))
 }
@@ -98,12 +126,10 @@ func TestAppInfo(t *testing.T) {
 	err := retry(cmd, "running", 10, 5)
 	require.Nil(t, err)
 
-	headerRegex := regexp.MustCompile("DEPLOYMENT VERSION[ \t]+IMAGE[ \t]+PROCESS NAME[ \t]+WEIGHT[ \t]+STATE[ \t]+CMD")
-	dataRegex := regexp.MustCompile(fmt.Sprintf("1[ \t]+%s[ \t]+web[ \t]+100%%[ \t]+1 running[ \t]", appImage))
 	b, err := cmd.Output()
 	require.Nil(t, err)
-	require.True(t, headerRegex.Match(b))
-	require.True(t, dataRegex.Match(b))
+	require.True(t, regexp.MustCompile("DEPLOYMENT VERSION[ \t]+IMAGE[ \t]+PROCESS NAME[ \t]+WEIGHT[ \t]+STATE[ \t]+CMD").Match(b))
+	require.True(t, regexp.MustCompile(fmt.Sprintf("1[ \t]+%s[ \t]+web[ \t]+100%%[ \t]+1 running[ \t]", appImage)).Match(b))
 }
 
 func TestAppRemove(t *testing.T) {
@@ -112,8 +138,14 @@ func TestAppRemove(t *testing.T) {
 	require.Contains(t, string(b), "Successfully removed!")
 }
 
-func TestFrameworkRemove(t *testing.T) {
-	b, err := exec.Command(ketch, "framework", "remove", framework).Output()
+func TestFrameworkByCliRemove(t *testing.T) {
+	b, err := exec.Command(ketch, "framework", "remove", frameworkCliName).Output()
+	require.Nil(t, err)
+	require.Contains(t, string(b), "Framework successfully removed!")
+}
+
+func TestFrameworkByYamlRemove(t *testing.T) {
+	b, err := exec.Command(ketch, "framework", "remove", frameworkYamlName).Output()
 	require.Nil(t, err)
 	require.Contains(t, string(b), "Framework successfully removed!")
 }
