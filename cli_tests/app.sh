@@ -65,7 +65,6 @@ EOF
   headerRegex="NAME[ \t]+STATUS[ \t]+NAMESPACE[ \t]+INGRESS TYPE[ \t]+INGRESS CLASS NAME[ \t]+CLUSTER ISSUER[ \t]+APPS"
   dataRegex="$FRAMEWORK[ \t]+[Created \t]+ketch-$FRAMEWORK[ \t]+traefik[ \t]+traefik"
 
-
   echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   [[ $result =~ $dataRegex ]]

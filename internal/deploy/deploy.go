@@ -116,11 +116,16 @@ func getUpdatedApp(ctx context.Context, client Client, cs *ChangeSet) (*ketchv1.
 		app = a
 
 		if cs.sourcePath != nil {
-			if cs.processes == nil {
-				if err := validateSourceDeploy(cs); err != nil {
+			if cs.processes != nil {
+				err = chart.WriteProcfile(*cs.processes, path.Join(*cs.sourcePath, defaultProcFile))
+				if err != nil {
 					return err
 				}
 			}
+			if err := validateSourceDeploy(cs); err != nil {
+				return err
+			}
+
 			builder := cs.getBuilder(app.Spec)
 			if builder != app.Spec.Builder {
 				app.Spec.Builder = builder
@@ -221,12 +226,7 @@ func deployFromSource(ctx context.Context, svc *Services, app *ketchv1.App, para
 		return err
 	}
 
-	var procfile *chart.Procfile
-	if params.processes == nil {
-		procfile, err = chart.NewProcfile(path.Join(sourcePath, defaultProcFile))
-	} else {
-		procfile, err = chart.ProcfileFromProcesses(*params.processes)
-	}
+	procfile, err := chart.NewProcfile(path.Join(sourcePath, defaultProcFile))
 	if err != nil {
 		return err
 	}
