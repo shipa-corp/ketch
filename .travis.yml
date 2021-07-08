@@ -37,12 +37,12 @@ jobs:
         - docker
       provider: script
       env:
-        - KETCH_EXECUTABLE_PATH=ketch
+        - KETCH_EXECUTABLE_PATH=./bin/ketch
       script:
         - bash cli_tests/install_kubectl.sh
         - bash cli_tests/install_minikube.sh
         - bash cli_tests/install_bats.sh
         - bash cli_tests/install_ketch.sh
-        - which ketch
-        - ls
+        - ls bin
+        - ./bin/ketch help
         - go test ./cli_tests/... -tags integration

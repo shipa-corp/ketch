@@ -164,17 +164,64 @@ func TestAppInfo(t *testing.T) {
 	require.True(t, regexp.MustCompile(fmt.Sprintf("1[ \t]+%s[ \t]+web[ \t]+100%%[ \t]+1 running[ \t]", appImage)).Match(b))
 }
 
-func TestAppStop(t *testing.T)        {}
-func TestAppStart(t *testing.T)       {}
-func TestAppLog(t *testing.T)         {}
-func TestBuilderList(t *testing.T)    {}
-func TestCnameAddRemove(t *testing.T) {}
-func TestUnitAdd(t *testing.T)        {}
-func TestUnitRemove(t *testing.T)     {}
-func TestUnitSet(t *testing.T)        {}
-func TestEnvSet(t *testing.T)         {}
-func TestEnvGet(t *testing.T)         {}
-func TestEnvUnset(t *testing.T)       {}
+func TestAppStop(t *testing.T) {
+	b, err := exec.Command(ketch, "app", "stop", appName).CombinedOutput()
+	require.Nil(t, err, string(b))
+	require.Equal(t, "Successfully stopped!\n", string(b))
+}
+
+func TestAppStart(t *testing.T) {
+	b, err := exec.Command(ketch, "app", "start", appName).CombinedOutput()
+	require.Nil(t, err, string(b))
+	require.Equal(t, "Successfully started!\n", string(b))
+}
+
+func TestAppLog(t *testing.T) {
+	err := exec.Command(ketch, "app", "log", appName).Run()
+	require.Nil(t, err)
+}
+
+func TestBuilderList(t *testing.T) {
+	b, err := exec.Command(ketch, "builder", "list").CombinedOutput()
+	require.Nil(t, err, string(b))
+	require.True(t, regexp.MustCompile("VENDOR[ \t]+IMAGE[ \t]+DESCRIPTION").Match(b))
+	require.True(t, regexp.MustCompile("Google[ \t]+gcr.io/buildpacks/builder:v1[ \t]+GCP Builder for all runtimes").Match(b))
+}
+
+func TestCnameAddRemove(t *testing.T) {
+	err := exec.Command(ketch, "cname", "add", cName, "--app", appName).Run()
+	require.Nil(t, err)
+	b, err := exec.Command(ketch, "app", "info", appName).CombinedOutput()
+	require.Nil(t, err)
+	require.True(t, regexp.MustCompile(fmt.Sprintf("Address: http://%s", cName)).Match(b), string(b))
+}
+
+func TestUnitAdd(t *testing.T) {
+	err := exec.Command(ketch, "unit", "add", "1", "--app", appName).Run()
+	require.Nil(t, err)
+	b, err := exec.Command("kubectl", "describe", "apps", appName).CombinedOutput()
+	require.Nil(t, err)
+	require.True(t, regexp.MustCompile("Units: 3").Match(b), string(b))
+}
+
+func TestUnitRemove(t *testing.T) {
+	err := exec.Command(ketch, "unit", "remove", "1", "--app", appName).Run()
+	require.Nil(t, err)
+	b, err := exec.Command("kubectl", "describe", "apps", appName).CombinedOutput()
+	require.Nil(t, err)
+	require.True(t, regexp.MustCompile("Units: 2").Match(b), string(b))
+}
+
+func TestUnitSet(t *testing.T) {
+	err := exec.Command(ketch, "unit", "set", "3", "--app", appName).Run()
+	require.Nil(t, err)
+	b, err := exec.Command("kubectl", "describe", "apps", appName).CombinedOutput()
+	require.Nil(t, err)
+	require.True(t, regexp.MustCompile("Units: 3").Match(b), string(b))
+}
+func TestEnvSet(t *testing.T)   {}
+func TestEnvGet(t *testing.T)   {}
+func TestEnvUnset(t *testing.T) {}
 
 func TestAppRemove(t *testing.T) {
 	b, err := exec.Command(ketch, "app", "remove", appName).CombinedOutput()
