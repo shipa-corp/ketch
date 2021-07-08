@@ -130,7 +130,7 @@ EOF
       then break
     fi
     count+=1
-    sleep 3
+    sleep 7
   done
 
   dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+1 running"
@@ -162,7 +162,7 @@ EOF
       then break
     fi
     count+=1
-    sleep 3
+    sleep 7
   done
 
   headerRegex="DEPLOYMENT VERSION[ \t]+IMAGE[ \t]+PROCESS NAME[ \t]+WEIGHT[ \t]+STATE[ \t]+CMD"
