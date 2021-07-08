@@ -23,6 +23,7 @@ setup() {
 }
 
 teardown() {
+  rm -f app.yaml
   rm -f framework.yaml
 }
 
@@ -70,7 +71,7 @@ EOF
 }
 
 @test "framework update" {
-  result=$($KETCH framework update "$FRAMEWORK" --app-quota-limit 1)
+  result=$($KETCH framework update "$FRAMEWORK" --app-quota-limit 2)
   echo "RECEIVED:" $result
   [[ $result =~ "Successfully updated!" ]]
 }
@@ -81,7 +82,7 @@ EOF
   echo "RECEIVED:" $result
   [[ $result =~ "name: $FRAMEWORK" ]]
   [[ $result =~ "namespace: ketch-$FRAMEWORK" ]]
-  [[ $result =~ "appQuotaLimit: 1" ]]
+  [[ $result =~ "appQuotaLimit: 2" ]]
   rm -f framework.yaml
 }
 
@@ -97,7 +98,6 @@ EOF
   result=$($KETCH framework update framework.yaml)
   echo "RECEIVED:" $result
   [[ $result =~ "Successfully updated!" ]]
-
   # assert update
   result=$($KETCH framework list)
   dataRegex="$FRAMEWORK-2[ \t]+ketch-$FRAMEWORK-2[ \t]+istio[ \t]+istio"
@@ -105,19 +105,43 @@ EOF
   [[ $result =~ $dataRegex ]]
 }
 
-@test "framework export" {
-  run $KETCH framework export "$FRAMEWORK"
-  result=$(cat framework.yaml)
-  echo "RECEIVED:" $result
-  [[ $result =~ "name: $FRAMEWORK" ]]
-  [[ $result =~ "namespace: ketch-$FRAMEWORK" ]]
-  [[ $result =~ "appQuotaLimit: 1" ]]
-  rm -f framework.yaml
-}
-
 @test "app deploy" {
   run $KETCH app deploy "$APP_NAME" --framework "$FRAMEWORK" -i "$APP_IMAGE"
   [[ $status -eq 0 ]]
+}
+
+@test "app deploy with yaml file" {
+  cat << EOF > app.yaml
+name: "$APP_NAME-2"
+version: v1
+type: Application
+image: "$APP_IMAGE"
+framework: "$FRAMEWORK"
+description: cli test app
+EOF
+  run $KETCH app deploy app.yaml
+  [[ $status -eq 0 ]]
+
+  # retry for "running" status
+  count=0
+  until [[ $count -ge 20 ]]
+  do
+    result=$($KETCH app info $APP_NAME-2)
+    if [[ $result =~ "running" ]]
+      then break
+    fi
+    count+=1
+    sleep 7
+  done
+
+  dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+"
+  result=$($KETCH app info $APP_NAME-2)
+  echo "RECEIVED:" $result
+  [[ $result =~ $dataRegex ]]
+  [[ $result =~ "Application: $APP_NAME-2" ]]
+  [[ $result =~ "Framework: $FRAMEWORK" ]]
+  [[ $result =~ "Version: v1" ]]
+  [[ $result =~ "Description: cli test app" ]]
 }
 
 @test "app list" {
@@ -225,6 +249,12 @@ EOF
 
 @test "app remove" {
   result=$($KETCH app remove "$APP_NAME")
+  echo "RECEIVED:" $result
+  [[ $result =~ "Successfully removed!" ]]
+}
+
+@test "app-2 remove" {
+  result=$($KETCH app remove "$APP_NAME-2")
   echo "RECEIVED:" $result
   [[ $result =~ "Successfully removed!" ]]
 }

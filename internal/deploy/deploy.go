@@ -23,10 +23,11 @@ import (
 )
 
 const (
-	defaultTrafficWeight = 100
-	minimumSteps         = 2
-	maximumSteps         = 100
-	defaultProcFile      = "Procfile"
+	defaultTrafficWeight   = 100
+	minimumSteps           = 2
+	maximumSteps           = 100
+	defaultProcFile        = "Procfile"
+	defaultUnitsPerProcess = 1
 )
 
 // Client represents go sdk k8s client operations that we need.
@@ -74,12 +75,19 @@ func getAppWithUpdater(ctx context.Context, client Client, cs *ChangeSet) (*ketc
 		if err = validateCreateApp(ctx, client, cs.appName, cs); err != nil {
 			return nil, nil, err
 		}
+		generateDefaultCName := true
+		var cname ketchv1.CnameList
+		if cs.cname != nil {
+			generateDefaultCName = false
+			cname = *cs.cname
+		}
 
 		return &app, func(ctx context.Context, app *ketchv1.App, _ bool) error {
 			app.ObjectMeta.Name = cs.appName
 			app.Spec.Deployments = []ketchv1.AppDeploymentSpec{}
 			app.Spec.Ingress = ketchv1.IngressSpec{
-				GenerateDefaultCname: true,
+				GenerateDefaultCname: generateDefaultCName,
+				Cnames:               cname,
 			}
 			return client.Create(ctx, app)
 		}, nil
@@ -108,9 +116,16 @@ func getUpdatedApp(ctx context.Context, client Client, cs *ChangeSet) (*ketchv1.
 		app = a
 
 		if cs.sourcePath != nil {
+			if cs.processes != nil {
+				err = chart.WriteProcfile(*cs.processes, path.Join(*cs.sourcePath, defaultProcFile))
+				if err != nil {
+					return err
+				}
+			}
 			if err := validateSourceDeploy(cs); err != nil {
 				return err
 			}
+
 			builder := cs.getBuilder(app.Spec)
 			if builder != app.Spec.Builder {
 				app.Spec.Builder = builder
@@ -186,7 +201,6 @@ func deployFromSource(ctx context.Context, svc *Services, app *ketchv1.App, para
 
 	image, _ := params.getImage()
 	sourcePath, _ := params.getSourceDirectory()
-	sourceProcFilePath := path.Join(sourcePath, defaultProcFile)
 
 	if err := svc.Builder(
 		ctx,
@@ -212,13 +226,13 @@ func deployFromSource(ctx context.Context, svc *Services, app *ketchv1.App, para
 		return err
 	}
 
-	procfile, err := makeProcfile(nil, sourceProcFilePath)
+	procfile, err := chart.NewProcfile(path.Join(sourcePath, defaultProcFile))
 	if err != nil {
 		return err
 	}
 
 	var updateRequest updateAppCRDRequest
-
+	updateRequest.version = params.version
 	updateRequest.image = image
 	steps, _ := params.getSteps()
 	updateRequest.steps = steps
@@ -231,6 +245,7 @@ func deployFromSource(ctx context.Context, svc *Services, app *ketchv1.App, para
 	updateRequest.stepTimeInterval = interval
 	updateRequest.nextScheduledTime = time.Now().Add(interval)
 	updateRequest.started = time.Now()
+	updateRequest.processes = params.processes
 
 	if app, err = updateAppCRD(ctx, svc, params.appName, updateRequest); err != nil {
 		return errors.Wrap(err, "deploy from source failed")
@@ -269,12 +284,12 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 		return err
 	}
 
-	procfile, err := makeProcfile(imgConfig, "")
+	procfile, err := makeProcfile(imgConfig)
 	if err != nil {
 		return err
 	}
-
 	var updateRequest updateAppCRDRequest
+	updateRequest.version = params.version
 	updateRequest.image = image
 	steps, _ := params.getSteps()
 	updateRequest.steps = steps
@@ -301,12 +316,7 @@ func deployFromImage(ctx context.Context, svc *Services, app *ketchv1.App, param
 	return nil
 }
 
-func makeProcfile(cfg *registryv1.ConfigFile, procFileName string) (*chart.Procfile, error) {
-	if procFileName != "" {
-		// validating of path handled by validateSourceDeploy function
-		return chart.NewProcfile(procFileName)
-	}
-
+func makeProcfile(cfg *registryv1.ConfigFile) (*chart.Procfile, error) {
 	// no procfile (not building from source)
 	cmds := append(cfg.Config.Entrypoint, cfg.Config.Cmd...)
 	if len(cmds) == 0 {
@@ -321,6 +331,7 @@ func makeProcfile(cfg *registryv1.ConfigFile, procFileName string) (*chart.Procf
 }
 
 type updateAppCRDRequest struct {
+	version           *string
 	image             string
 	steps             int
 	stepWeight        uint8
@@ -330,6 +341,7 @@ type updateAppCRDRequest struct {
 	nextScheduledTime time.Time
 	started           time.Time
 	stepTimeInterval  time.Duration
+	processes         *[]ketchv1.ProcessSpec
 }
 
 func updateAppCRD(ctx context.Context, svc *Services, appName string, args updateAppCRDRequest) (*ketchv1.App, error) {
@@ -338,13 +350,26 @@ func updateAppCRD(ctx context.Context, svc *Services, appName string, args updat
 		if err := svc.Client.Get(ctx, types.NamespacedName{Name: appName}, &updated); err != nil {
 			return errors.Wrap(err, "could not get app to deploy %q", appName)
 		}
+		updated.Spec.Version = args.version
 
 		processes := make([]ketchv1.ProcessSpec, 0, len(args.procFile.Processes))
 		for _, processName := range args.procFile.SortedNames() {
 			cmd := args.procFile.Processes[processName]
+			units := defaultUnitsPerProcess
+			var env []ketchv1.Env
+			if args.processes != nil {
+				for _, process := range *args.processes {
+					if process.Name == processName && process.Units != nil {
+						units = *process.Units
+						env = process.Env
+					}
+				}
+			}
 			processes = append(processes, ketchv1.ProcessSpec{
-				Name: processName,
-				Cmd:  cmd,
+				Name:  processName,
+				Cmd:   cmd,
+				Units: &units,
+				Env:   env,
 			})
 		}
 		exposedPorts := make([]ketchv1.ExposedPort, 0, len(args.configFile.Config.ExposedPorts))
@@ -393,7 +418,6 @@ func updateAppCRD(ctx context.Context, svc *Services, appName string, args updat
 		}
 
 		updated.Spec.DeploymentsCount += 1
-
 		return svc.Client.Update(ctx, &updated)
 	})
 	return &updated, err
