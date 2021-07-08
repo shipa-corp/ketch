@@ -65,7 +65,6 @@ EOF
   result=$($KETCH framework list)
   headerRegex="NAME[ \t]+STATUS[ \t]+NAMESPACE[ \t]+INGRESS TYPE[ \t]+INGRESS CLASS NAME[ \t]+CLUSTER ISSUER[ \t]+APPS"
   dataRegex="$FRAMEWORK[ \t]+ketch-$FRAMEWORK[ \t]+traefik[ \t]+traefik"
-
   echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   [[ $result =~ $dataRegex ]]
@@ -99,7 +98,7 @@ EOF
   result=$($KETCH framework update framework.yaml)
   echo "RECEIVED:" $result
   [[ $result =~ "Successfully updated!" ]]
-
+  # assert update
   result=$($KETCH framework list)
   dataRegex="$FRAMEWORK-2[ \t]+ketch-$FRAMEWORK-2[ \t]+istio[ \t]+istio"
   echo "RECEIVED:" $result
@@ -148,16 +147,16 @@ EOF
 @test "app list" {
   result=$($KETCH app list)
   headerRegex="NAME[ \t]+FRAMEWORK[ \t]+STATE[ \t]+ADDRESSES[ \t]+BUILDER[ \t]+DESCRIPTION"
-  dataRegex="$APP_NAME[ \t]+$FRAMEWORK"
+  dataRegex="$APP_NAME[ \t]+$FRAMEWORK[\t]+(created|running)"
   echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   [[ $result =~ $dataRegex ]]
 }
 
 @test "app info" {
+  result=$($KETCH app info "$APP_NAME")
   headerRegex="DEPLOYMENT VERSION[ \t]+IMAGE[ \t]+PROCESS NAME[ \t]+WEIGHT[ \t]+STATE[ \t]+CMD"
-  dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+(created|running)[ \t]"
-  result=$($KETCH app info $APP_NAME)
+  dataRegex="1[ \t]+$APP_IMAGE[ \t]+web[ \t]+100%[ \t]+created[ \t]"
   echo "RECEIVED:" $result
   [[ $result =~ $headerRegex ]]
   [[ $result =~ $dataRegex ]]
