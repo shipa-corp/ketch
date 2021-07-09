@@ -185,26 +185,8 @@ func getUpdatedApp(ctx context.Context, client Client, cs *ChangeSet) (*ketchv1.
 	return app, err
 }
 
-//<<<<<<< HEAD
-//func deployFromSource(ctx context.Context, svc *Services, app *ketchv1.App, params *ChangeSet) error {
-//	ketchYaml, err := params.getKetchYaml()
-//	if err != nil {
-//		return err
-//	}
-//
-//	var framework ketchv1.Framework
-//	if err := svc.Client.Get(ctx, types.NamespacedName{Name: app.Spec.Framework}, &framework); err != nil {
-//		return errors.Wrap(err, "failed to get framework %s", app.Spec.Framework)
-//	}
-//
-//	image, _ := params.getImage()
-//	sourcePath, _ := params.getSourceDirectory()
-//
-//	if err := svc.Builder(
-//=======
 func buildFromSource(ctx context.Context, svc *Services, app *ketchv1.App, appName, image, sourcePath string) error {
 	return svc.Builder(
-		//>>>>>>> cc0e8463ece38b5c1e864c73bc69cdcf8528c639
 		ctx,
 		&build.CreateImageFromSourceRequest{
 			Image:      image,
@@ -213,57 +195,7 @@ func buildFromSource(ctx context.Context, svc *Services, app *ketchv1.App, appNa
 			BuildPacks: app.Spec.BuildPacks,
 		},
 		build.WithWorkingDirectory(sourcePath),
-		//<<<<<<< HEAD
-		//	); err != nil {
-		//		return err
-		//	}
-		//
-		//	imageRequest := ImageConfigRequest{
-		//		imageName:       image,
-		//		secretName:      app.Spec.DockerRegistry.SecretName,
-		//		secretNamespace: framework.Spec.NamespaceName,
-		//		client:          svc.KubeClient,
-		//	}
-		//	imgConfig, err := svc.GetImageConfig(ctx, imageRequest)
-		//	if err != nil {
-		//		return err
-		//	}
-		//
-		//	procfile, err := chart.NewProcfile(path.Join(sourcePath, defaultProcFile))
-		//	if err != nil {
-		//		return err
-		//	}
-		//
-		//	var updateRequest updateAppCRDRequest
-		//	updateRequest.version = params.version
-		//	updateRequest.image = image
-		//	steps, _ := params.getSteps()
-		//	updateRequest.steps = steps
-		//	stepWeight, _ := params.getStepWeight()
-		//	updateRequest.stepWeight = stepWeight
-		//	updateRequest.ketchYaml = ketchYaml
-		//	updateRequest.configFile = imgConfig
-		//	updateRequest.procFile = procfile
-		//	interval, _ := params.getStepInterval()
-		//	updateRequest.stepTimeInterval = interval
-		//	updateRequest.nextScheduledTime = time.Now().Add(interval)
-		//	updateRequest.started = time.Now()
-		//	updateRequest.processes = params.processes
-		//
-		//	if app, err = updateAppCRD(ctx, svc, params.appName, updateRequest); err != nil {
-		//		return errors.Wrap(err, "deploy from source failed")
-		//	}
-		//
-		//	wait, _ := params.getWait()
-		//	if wait {
-		//		timeout, _ := params.getTimeout()
-		//		return svc.Wait(ctx, svc, app, timeout)
-		//	}
-		//
-		//	return nil
-		//=======
 	)
-	//>>>>>>> cc0e8463ece38b5c1e864c73bc69cdcf8528c639
 }
 
 func deployImage(ctx context.Context, svc *Services, app *ketchv1.App, params *ChangeSet) error {
@@ -343,16 +275,12 @@ func deployImage(ctx context.Context, svc *Services, app *ketchv1.App, params *C
 }
 
 func makeProcfile(cfg *registryv1.ConfigFile) (*chart.Procfile, error) {
-	//<<<<<<< HEAD
-	//	// no procfile (not building from source)
-	//=======
 	if val, ok := cfg.Config.Labels["io.buildpacks.build.metadata"]; ok {
 		// the above label contains an escaped json string of build details
 		unquoted := strings.ReplaceAll(val, "\\", "")
 		return chart.CreateProcfile(unquoted)
 	}
 	// images not created by pack
-	//>>>>>>> cc0e8463ece38b5c1e864c73bc69cdcf8528c639
 	cmds := append(cfg.Config.Entrypoint, cfg.Config.Cmd...)
 	if len(cmds) == 0 {
 		return nil, fmt.Errorf("can't use image, no entrypoint or commands")
@@ -377,13 +305,9 @@ type updateAppCRDRequest struct {
 	nextScheduledTime time.Time
 	started           time.Time
 	stepTimeInterval  time.Duration
-	//<<<<<<< HEAD
-	processes *[]ketchv1.ProcessSpec
-	//=======
-	units   int
-	version int
-	process string
-	//>>>>>>> cc0e8463ece38b5c1e864c73bc69cdcf8528c639
+	units             int
+	version           int
+	process           string
 }
 
 func updateAppCRD(ctx context.Context, svc *Services, appName string, args updateAppCRDRequest) (*ketchv1.App, error) {
@@ -422,24 +346,6 @@ func updateAppCRD(ctx context.Context, svc *Services, appName string, args updat
 		processes := make([]ketchv1.ProcessSpec, 0, len(args.procFile.Processes))
 		for _, processName := range args.procFile.SortedNames() {
 			cmd := args.procFile.Processes[processName]
-			//<<<<<<< HEAD
-			//			units := defaultUnitsPerProcess
-			//			var env []ketchv1.Env
-			//			if args.processes != nil {
-			//				for _, process := range *args.processes {
-			//					if process.Name == processName && process.Units != nil {
-			//						units = *process.Units
-			//						env = process.Env
-			//					}
-			//				}
-			//			}
-			//			processes = append(processes, ketchv1.ProcessSpec{
-			//				Name:  processName,
-			//				Cmd:   cmd,
-			//				Units: &units,
-			//				Env:   env,
-			//			})
-			//=======
 			ps := ketchv1.ProcessSpec{
 				Name: processName,
 				Cmd:  cmd,
@@ -456,7 +362,6 @@ func updateAppCRD(ctx context.Context, svc *Services, appName string, args updat
 			}
 
 			processes = append(processes, ps)
-			//>>>>>>> cc0e8463ece38b5c1e864c73bc69cdcf8528c639
 		}
 
 		exposedPorts := make([]ketchv1.ExposedPort, 0, len(args.configFile.Config.ExposedPorts))
@@ -510,17 +415,12 @@ func updateAppCRD(ctx context.Context, svc *Services, appName string, args updat
 			updated.Spec.Deployments = []ketchv1.AppDeploymentSpec{deploymentSpec}
 		}
 
-		//<<<<<<< HEAD
-		//		updated.Spec.DeploymentsCount += 1
-		//=======
 		if args.units > 0 {
 			s := ketchv1.NewSelector(args.version, args.process)
 			if err := updated.SetUnits(s, args.units); err != nil {
 				return err
 			}
 		}
-
-		//>>>>>>> cc0e8463ece38b5c1e864c73bc69cdcf8528c639
 		return svc.Client.Update(ctx, &updated)
 	})
 	return &updated, err
