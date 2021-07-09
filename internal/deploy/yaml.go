@@ -140,7 +140,7 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 	}
 	c := &ChangeSet{
 		appName:              *application.Name,
-		version:              application.Version,
+		appVersion:           application.Version,
 		appType:              application.Type,
 		image:                application.Image,
 		description:          application.Description,
@@ -166,8 +166,8 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 
 // apply defaults sets default values for a ChangeSet
 func (c *ChangeSet) applyDefaults() {
-	if c.version == nil {
-		c.version = &defaultVersion
+	if c.appVersion == nil {
+		c.appVersion = &defaultVersion
 	}
 	if c.appType == nil {
 		c.appType = &typeApplication

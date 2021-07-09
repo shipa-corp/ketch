@@ -18,7 +18,7 @@ func TestParseProcfile(t *testing.T) {
 	}{
 		{
 			name:    "single web command",
-			content: "web: command arg1 arg2",
+			content: "{\"processes\":[{\"type\":\"web\"}]}",
 			want: &Procfile{
 				Processes: map[string][]string{
 					"web": {"web"},
@@ -28,7 +28,7 @@ func TestParseProcfile(t *testing.T) {
 		},
 		{
 			name:    "single command",
-			content: "long-command-name: command arg1 arg2",
+			content: "{\"processes\":[{\"type\":\"long-command-name\"}]}",
 			want: &Procfile{
 				Processes: map[string][]string{
 					"long-command-name": {"long-command-name"},
@@ -38,7 +38,7 @@ func TestParseProcfile(t *testing.T) {
 		},
 		{
 			name:    "two commands",
-			content: "web: command arg1 arg2\nworker: celery worker",
+			content: "{\"processes\":[{\"type\":\"web\"},{\"type\":\"worker\"}]}",
 			want: &Procfile{
 				Processes: map[string][]string{
 					"web":    {"web"},
@@ -49,7 +49,7 @@ func TestParseProcfile(t *testing.T) {
 		},
 		{
 			name:    "two commands without web",
-			content: "worker: command arg1 arg2\n\r\nabc: abc-arg1 abc-arg2",
+			content: "{\"processes\":[{\"type\":\"worker\"},{\"type\":\"abc\"}]}",
 			want: &Procfile{
 				Processes: map[string][]string{
 					"worker": {"worker"},
@@ -60,7 +60,7 @@ func TestParseProcfile(t *testing.T) {
 		},
 		{
 			name:    "three commands without web",
-			content: "bbb: bbb-command\n\r\nzzz: zzz-command\r\naaa: aaa-command",
+			content: "{\"processes\":[{\"type\":\"aaa\"},{\"type\":\"zzz\"},{\"type\":\"bbb\"}]}",
 			want: &Procfile{
 				Processes: map[string][]string{
 					"aaa": {"aaa"},
@@ -71,41 +71,29 @@ func TestParseProcfile(t *testing.T) {
 			},
 		},
 		{
-			name:    "procfile with comments",
-			content: "bbb: bbb-command\n# some comment\n\nzzz: zzz-command\r\naaa: aaa-command\n # another comment",
+			name:    "ignore illicit name",
+			content: "{\"processes\":[{\"type\":\"web\"},{\"type\":\"bad.name\"}]}",
 			want: &Procfile{
 				Processes: map[string][]string{
-					"aaa": {"aaa"},
-					"zzz": {"zzz"},
-					"bbb": {"bbb"},
+					"web": {"web"},
 				},
-				RoutableProcessName: "aaa",
+				RoutableProcessName: "web",
 			},
 		},
 		{
-			name:    "ignore broken lines",
-			content: "b,bb: bbb-command\n\r\n: zzz-command\r\naaa: aaa-command",
-			want: &Procfile{
-				Processes: map[string][]string{
-					"aaa": {"aaa"},
-				},
-				RoutableProcessName: "aaa",
-			},
-		},
-		{
-			name:    "broken procfile",
-			content: ": bbb-command",
+			name:    "broken json",
+			content: "",
 			wantErr: true,
 		},
 		{
-			name:    "empty procfile",
-			content: "",
+			name:    "no processes",
+			content: "{\"processes\":[]}",
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseProcfile(tt.content)
+			got, err := CreateProcfile(tt.content)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseProcfile() error = %v, wantErr %v", err, tt.wantErr)
 				return

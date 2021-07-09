@@ -263,30 +263,6 @@ func (s *AppDeploymentSpec) setUnitsForAllProcess(units int) {
 	}
 }
 
-func (s *AppDeploymentSpec) addUnits(process string, units int) error {
-	for i, processSpec := range s.Processes {
-		if processSpec.Name == process {
-			currentUnits := DefaultNumberOfUnits
-			if processSpec.Units != nil {
-				currentUnits = *processSpec.Units
-			}
-			newUnits := currentUnits + units
-			if newUnits < 0 {
-				newUnits = 0
-			}
-			s.Processes[i].Units = &newUnits
-			return nil
-		}
-	}
-	return ErrProcessNotFound
-}
-
-func (s *AppDeploymentSpec) addUnitsForAllProcess(units int) {
-	for _, processSpec := range s.Processes {
-		_ = s.addUnits(processSpec.Name, units)
-	}
-}
-
 // SetUnits set quantity of units of the specified processes.
 func (app *App) SetUnits(selector Selector, units int) error {
 	deploymentFound := false
@@ -300,28 +276,6 @@ func (app *App) SetUnits(selector Selector, units int) error {
 			}
 		} else {
 			deploymentSpec.setUnitsForAllProcess(units)
-		}
-		deploymentFound = true
-	}
-	if selector.DeploymentVersion != nil && !deploymentFound {
-		return ErrDeploymentNotFound
-	}
-	return nil
-}
-
-// AddUnits add units to the specified processes.
-func (app *App) AddUnits(selector Selector, units int) error {
-	deploymentFound := false
-	for _, deploymentSpec := range app.Spec.Deployments {
-		if selector.DeploymentVersion != nil && *selector.DeploymentVersion != deploymentSpec.Version {
-			continue
-		}
-		if selector.Process != nil {
-			if err := deploymentSpec.addUnits(*selector.Process, units); err != nil {
-				return err
-			}
-		} else {
-			deploymentSpec.addUnitsForAllProcess(units)
 		}
 		deploymentFound = true
 	}

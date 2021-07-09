@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"os"
 	"path"
 	"testing"
@@ -11,7 +12,6 @@ import (
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -150,6 +150,7 @@ kubernetes:
 web: python app.py
 worker: python app.py
 `
+	packBuildMetadata string = "{\"bom\":null,\"buildpacks\":[{\"id\":\"heroku/python\",\"version\":\"0.3.1\"},{\"id\":\"heroku/procfile\",\"version\":\"0.6.2\"}],\"launcher\":{\"version\":\"0.11.3\",\"source\":{\"git\":{\"repository\":\"github.com/buildpacks/lifecycle\",\"commit\":\"aa4bbac\"}}},\"processes\":[{\"type\":\"web\",\"command\":\"python app.py\",\"args\":null,\"direct\":false,\"buildpackID\":\"heroku/procfile\"},{\"type\":\"worker\",\"command\":\"python app.py\",\"args\":null,\"direct\":false,\"buildpackID\":\"heroku/procfile\"},{\"type\":\"worker1\",\"command\":\"python app.py\",\"args\":null,\"direct\":false,\"buildpackID\":\"heroku/procfile\"}]}"
 )
 
 func TestNewCommand(t *testing.T) {
@@ -159,7 +160,7 @@ func TestNewCommand(t *testing.T) {
 		arguments   []string
 		setup       func(t *testing.T)
 		userDefault string
-		validate    func(t *testing.T, m deploy.Client)
+		validate    func(t *testing.T, m *mockClient)
 		wantError   bool
 	}{
 		{
@@ -176,9 +177,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, os.Chdir(dir))
 				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
-			validate: func(t *testing.T, m deploy.Client) {
-				mock, ok := m.(*mockClient)
-				require.True(t, ok)
+			validate: func(t *testing.T, mock *mockClient) {
 				require.Equal(t, "some other builder", mock.app.Spec.Builder)
 			},
 			params: &deploy.Services{
@@ -208,9 +207,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, os.Chdir(dir))
 				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
-			validate: func(t *testing.T, m deploy.Client) {
-				mock, ok := m.(*mockClient)
-				require.True(t, ok)
+			validate: func(t *testing.T, mock *mockClient) {
 				require.Equal(t, "superduper builder", mock.app.Spec.Builder)
 			},
 			params: &deploy.Services{
@@ -240,9 +237,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, os.Chdir(dir))
 				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
-			validate: func(t *testing.T, m deploy.Client) {
-				mock, ok := m.(*mockClient)
-				require.True(t, ok)
+			validate: func(t *testing.T, mock *mockClient) {
 				require.Equal(t, deploy.DefaultBuilder, mock.app.Spec.Builder)
 			},
 			params: &deploy.Services{
@@ -275,9 +270,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			userDefault: "newDefault",
-			validate: func(t *testing.T, m deploy.Client) {
-				mock, ok := m.(*mockClient)
-				require.True(t, ok)
+			validate: func(t *testing.T, mock *mockClient) {
 				require.Equal(t, "newDefault", mock.app.Spec.Builder)
 			},
 			params: &deploy.Services{
@@ -309,9 +302,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
 			userDefault: "newDefault",
-			validate: func(t *testing.T, m deploy.Client) {
-				mock, ok := m.(*mockClient)
-				require.True(t, ok)
+			validate: func(t *testing.T, mock *mockClient) {
 				require.Equal(t, mock.app.Spec.Builder, "initialBuilder")
 
 			},
@@ -356,9 +347,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, os.Chdir(dir))
 				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
-			validate: func(t *testing.T, m deploy.Client) {
-				mock, ok := m.(*mockClient)
-				require.True(t, ok)
+			validate: func(t *testing.T, mock *mockClient) {
 				require.Equal(t, "superduper", mock.app.Spec.Builder)
 				require.Equal(t, []string{"pack1", "pack2"}, mock.app.Spec.BuildPacks)
 			},
@@ -395,9 +384,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, ioutil.WriteFile("src/ketch.yaml", []byte(ketchYaml), 0600))
 				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
-			validate: func(t *testing.T, m deploy.Client) {
-				mock, ok := m.(*mockClient)
-				require.True(t, ok)
+			validate: func(t *testing.T, mock *mockClient) {
 				require.Equal(t, "myframework", mock.app.Spec.Framework)
 				require.Equal(t, "newbuilder", mock.app.Spec.Builder)
 				require.Len(t, mock.app.Spec.Deployments, 1)
@@ -441,9 +428,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, ioutil.WriteFile("config/ketch.yaml", []byte(ketchYaml), 0600))
 				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
-			validate: func(t *testing.T, m deploy.Client) {
-				mock, ok := m.(*mockClient)
-				require.True(t, ok)
+			validate: func(t *testing.T, mock *mockClient) {
 				require.Len(t, mock.app.Spec.Deployments, 1)
 				require.Len(t, mock.app.Spec.Deployments[0].KetchYaml.Kubernetes.Processes, 3)
 				require.Len(t, mock.app.Spec.Env, 2)
@@ -477,9 +462,7 @@ func TestNewCommand(t *testing.T) {
 				require.Nil(t, os.Chdir(dir))
 				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
 			},
-			validate: func(t *testing.T, m deploy.Client) {
-				mock, ok := m.(*mockClient)
-				require.True(t, ok)
+			validate: func(t *testing.T, mock *mockClient) {
 				require.Equal(t, mock.app.Spec.Framework, "initialframework")
 
 			},
@@ -557,6 +540,39 @@ func TestNewCommand(t *testing.T) {
 					return m
 				}(),
 
+				KubeClient:     fake.NewSimpleClientset(),
+				Builder:        build.GetSourceHandler(&packMocker{}),
+				GetImageConfig: getImageConfig,
+				Wait:           nil,
+				Writer:         &bytes.Buffer{},
+			},
+		},
+		{
+			name:      "procfile flag with source specified",
+			wantError: true,
+			arguments: []string{
+				"myapp",
+				"src",
+				"--framework", "myframework",
+				"--image", "shipa/go-sample:latest",
+				"--procfile", "./Procfile",
+			},
+			setup: func(t *testing.T) {
+				dir := t.TempDir()
+				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
+				require.Nil(t, os.Chdir(dir))
+			},
+			validate: func(t *testing.T, mock *mockClient) {
+				require.Equal(t, "myframework", mock.app.Spec.Framework)
+			},
+			params: &deploy.Services{
+				Client: func() *mockClient {
+					m := newMockClient()
+					m.get[1] = func(_ *mockClient, _ runtime.Object) error {
+						return errors.NewNotFound(v1.Resource(""), "")
+					}
+					return m
+				}(),
 				KubeClient:     fake.NewSimpleClientset(),
 				Builder:        build.GetSourceHandler(&packMocker{}),
 				GetImageConfig: getImageConfig,
@@ -655,6 +671,276 @@ func TestNewCommand(t *testing.T) {
 				Writer:         &bytes.Buffer{},
 			},
 		},
+		{
+			name:      "illicit use of --unit-version without --units",
+			wantError: true,
+			arguments: []string{
+				"myapp",
+				"src",
+				"--framework", "myframework",
+				"--image", "shipa/go-sample:latest",
+				"--unit-version", "7",
+			},
+			setup: func(t *testing.T) {
+				dir := t.TempDir()
+				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
+				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
+			},
+			params: &deploy.Services{
+				Client: func() *mockClient {
+					m := newMockClient()
+					m.get[1] = func(_ *mockClient, _ runtime.Object) error {
+						return errors.NewNotFound(v1.Resource(""), "")
+					}
+					return m
+				}(),
+				KubeClient:     fake.NewSimpleClientset(),
+				Builder:        build.GetSourceHandler(&packMocker{}),
+				GetImageConfig: getImageConfig,
+				Wait:           nil,
+				Writer:         &bytes.Buffer{},
+			},
+		},
+		{
+			name:      "illicit use of --unit-process without --units",
+			wantError: true,
+			arguments: []string{
+				"myapp",
+				"src",
+				"--framework", "myframework",
+				"--image", "shipa/go-sample:latest",
+				"--unit-process", "test",
+			},
+			setup: func(t *testing.T) {
+				dir := t.TempDir()
+				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
+				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
+			},
+			params: &deploy.Services{
+				Client: func() *mockClient {
+					m := newMockClient()
+					m.get[1] = func(_ *mockClient, _ runtime.Object) error {
+						return errors.NewNotFound(v1.Resource(""), "")
+					}
+					return m
+				}(),
+				KubeClient:     fake.NewSimpleClientset(),
+				Builder:        build.GetSourceHandler(&packMocker{}),
+				GetImageConfig: getImageConfig,
+				Wait:           nil,
+				Writer:         &bytes.Buffer{},
+			},
+		},
+		{
+			name: "happy path with --units build from source, update deployment spec",
+			arguments: []string{
+				"myapp",
+				"src",
+				"--units", "4",
+				"--image", "shipa/go-sample:latest",
+			},
+			setup: func(t *testing.T) {
+				dir := t.TempDir()
+				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
+				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
+			},
+			validate: func(t *testing.T, mock *mockClient) {
+				// changes from the previous deployment defined below to the one created by procfile variable above
+				require.Equal(t, mock.app.Spec.Deployments[0].Processes[1].Name, "worker")
+				require.Equal(t, mock.app.Spec.Deployments[0].Processes[1].Cmd[0], "worker")
+				for _, process := range mock.app.Spec.Deployments[0].Processes {
+					require.Equal(t, *process.Units, 4)
+				}
+				require.Equal(t, mock.app.Spec.Framework, "initialframework")
+
+			},
+			params: &deploy.Services{
+				Client: func() *mockClient {
+					m := newMockClient()
+					m.app.Spec.Deployments = []ketchv1.AppDeploymentSpec{
+						{
+							Image:   "shipa/go-sample:latest",
+							Version: 1,
+							Processes: []ketchv1.ProcessSpec{
+								{
+									Name: "web",
+									Cmd:  []string{"/cnb/process/web"},
+								},
+								{
+									Name: "worker1",
+									Cmd:  []string{"do", "work"},
+								},
+								{
+									Name: "worker2",
+									Cmd:  []string{"do", "work"},
+								},
+							},
+							KetchYaml:       nil,
+							Labels:          nil,
+							RoutingSettings: ketchv1.RoutingSettings{},
+							ExposedPorts:    nil,
+						},
+					}
+					return m
+				}(),
+
+				KubeClient: fake.NewSimpleClientset(),
+				Builder:    build.GetSourceHandler(&packMocker{}),
+
+				GetImageConfig: func(ctx context.Context, args deploy.ImageConfigRequest) (*registryv1.ConfigFile, error) {
+					return &registryv1.ConfigFile{
+						Config: registryv1.Config{
+							Cmd:    []string{"/bin/eatme"},
+							Labels: map[string]string{"io.buildpacks.build.metadata": packBuildMetadata},
+						},
+					}, nil
+				},
+				Wait:   nil,
+				Writer: &bytes.Buffer{},
+			},
+		},
+		{
+			name: "happy path with --units and --unit-process build from source, update deployment spec",
+			arguments: []string{
+				"myapp",
+				"src",
+				"--units", "4",
+				"--unit-process", "worker",
+				"--image", "shipa/go-sample:latest",
+			},
+			setup: func(t *testing.T) {
+				dir := t.TempDir()
+				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
+				require.Nil(t, os.Chdir(dir))
+				require.Nil(t, ioutil.WriteFile("src/Procfile", []byte(procfile), 0600))
+			},
+			validate: func(t *testing.T, mock *mockClient) {
+				require.Nil(t, mock.app.Spec.Deployments[0].Processes[0].Units)
+				require.Equal(t, *mock.app.Spec.Deployments[0].Processes[1].Units, 4)
+				// changes from the previous deployment defined below to the one created by procfile variable above
+				require.Equal(t, mock.app.Spec.Deployments[0].Processes[1].Name, "worker")
+				require.Equal(t, mock.app.Spec.Deployments[0].Processes[1].Cmd[0], "worker")
+				require.Equal(t, mock.app.Spec.Framework, "initialframework")
+
+			},
+			params: &deploy.Services{
+				Client: func() *mockClient {
+					m := newMockClient()
+					m.app.Spec.Deployments = []ketchv1.AppDeploymentSpec{
+						{
+							Image:   "shipa/go-sample:latest",
+							Version: 1,
+							Processes: []ketchv1.ProcessSpec{
+								{
+									Name: "web",
+									Cmd:  []string{"/cnb/process/web"},
+								},
+								{
+									Name: "worker1",
+									Cmd:  []string{"do", "work"},
+								},
+							},
+							KetchYaml:       nil,
+							Labels:          nil,
+							RoutingSettings: ketchv1.RoutingSettings{},
+							ExposedPorts:    nil,
+						},
+					}
+					return m
+				}(),
+
+				KubeClient: fake.NewSimpleClientset(),
+				Builder:    build.GetSourceHandler(&packMocker{}),
+				GetImageConfig: func(ctx context.Context, args deploy.ImageConfigRequest) (*registryv1.ConfigFile, error) {
+					return &registryv1.ConfigFile{
+						Config: registryv1.Config{
+							Cmd:    []string{"/bin/eatme"},
+							Labels: map[string]string{"io.buildpacks.build.metadata": packBuildMetadata},
+						},
+					}, nil
+				},
+				Wait:   nil,
+				Writer: &bytes.Buffer{},
+			},
+		},
+		{
+			name: "happy path with --units, --unit-process, and --unit-version build from image",
+			arguments: []string{
+				"myapp",
+				"--units", "4",
+				"--unit-process", "worker1",
+				"--unit-version", "1",
+				"--image", "shipa/go-sample:latest",
+			},
+			setup: func(t *testing.T) {
+				dir := t.TempDir()
+				require.Nil(t, os.Mkdir(path.Join(dir, "src"), 0700))
+				require.Nil(t, os.Chdir(dir))
+			},
+			validate: func(t *testing.T, mock *mockClient) {
+				require.Nil(t, mock.app.Spec.Deployments[0].Processes[0].Units)
+				require.Equal(t, *mock.app.Spec.Deployments[0].Processes[1].Units, 4)
+				require.Nil(t, mock.app.Spec.Deployments[1].Processes[0].Units)
+				require.Nil(t, mock.app.Spec.Deployments[1].Processes[1].Units)
+				require.Equal(t, mock.app.Spec.Framework, "initialframework")
+
+			},
+			params: &deploy.Services{
+				Client: func() *mockClient {
+					m := newMockClient()
+					// must be canary to have more than one deployment
+					m.app.Spec.Canary.Active = true
+					m.app.Spec.Deployments = []ketchv1.AppDeploymentSpec{
+						{
+							Image:   "shipa/go-sample:latest",
+							Version: 1,
+							Processes: []ketchv1.ProcessSpec{
+								{
+									Name: "web",
+									Cmd:  []string{"/cnb/process/web"},
+								},
+								{
+									Name: "worker1",
+									Cmd:  []string{"do", "work"},
+								},
+							},
+							KetchYaml:       nil,
+							Labels:          nil,
+							RoutingSettings: ketchv1.RoutingSettings{},
+							ExposedPorts:    nil,
+						},
+						{
+							Image:   "shipa/go-sample:latest",
+							Version: 2,
+							Processes: []ketchv1.ProcessSpec{
+								{
+									Name: "web",
+									Cmd:  []string{"/cnb/process/web"},
+								},
+								{
+									Name: "worker1",
+									Cmd:  []string{"do", "work"},
+								},
+							},
+							KetchYaml:       nil,
+							Labels:          nil,
+							RoutingSettings: ketchv1.RoutingSettings{},
+							ExposedPorts:    nil,
+						},
+					}
+					return m
+				}(),
+
+				KubeClient:     fake.NewSimpleClientset(),
+				Builder:        build.GetSourceHandler(&packMocker{}),
+				GetImageConfig: getImageConfig,
+				Wait:           nil,
+				Writer:         &bytes.Buffer{},
+			},
+		},
 	}
 
 	for _, tc := range tt {
@@ -680,7 +966,9 @@ func TestNewCommand(t *testing.T) {
 
 			require.Nil(t, err)
 			if tc.validate != nil {
-				tc.validate(t, tc.params.Client)
+				mock, ok := tc.params.Client.(*mockClient)
+				require.True(t, ok)
+				tc.validate(t, mock)
 			}
 		})
 	}

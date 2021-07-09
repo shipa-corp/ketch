@@ -1,9 +1,9 @@
 package chart
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"sort"
@@ -15,22 +15,13 @@ import (
 var (
 	ErrEmptyProcfile = errors.New("procfile should contain at least one process name with a command")
 
-	procfileRegex = regexp.MustCompile(`^([A-Za-z0-9_-]+):\s*(.+)$`)
+	processNameRegex = regexp.MustCompile(`^([A-Za-z0-9_-]+)$`)
 )
 
 // Procfile represents a parsed Procfile.
 type Procfile struct {
 	Processes           map[string][]string
 	RoutableProcessName string
-}
-
-// NewProcfile creates a Procfile from a file.
-func NewProcfile(fileName string) (*Procfile, error) {
-	content, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return nil, err
-	}
-	return ParseProcfile(string(content))
 }
 
 func (p *Procfile) IsRoutable(processName string) bool {
@@ -46,16 +37,29 @@ func (p *Procfile) SortedNames() []string {
 	return names
 }
 
-// ParseProcfile parses the content of Procfile and returns a Procfile instance.
-// this function should only be called when building from source, since deploying
-// from image does not allow a user to specify a Procfile
-func ParseProcfile(content string) (*Procfile, error) {
-	procfile := strings.Split(content, "\n")
-	processes := make(map[string][]string, len(procfile))
+type packMetadata struct {
+	Processes []packProcess `json:"processes"`
+}
+
+// contains other fields like command, but only the name (type) is needed
+type packProcess struct {
+	Type string `json:"type"`
+}
+
+// CreateProcfile creates a Procfile instance from pack build metadata found under the
+// `io.buildpacks.build.metadata` label. This function should only be called for images
+// build using pack
+func CreateProcfile(buildMetadata string) (*Procfile, error) {
+	var meta packMetadata
+	if err := json.Unmarshal([]byte(buildMetadata), &meta); err != nil {
+		return nil, err
+	}
+	processes := make(map[string][]string, len(meta.Processes))
 	var names []string
-	for _, process := range procfile {
-		if p := procfileRegex.FindStringSubmatch(process); p != nil {
+	for _, process := range meta.Processes {
+		if p := processNameRegex.FindStringSubmatch(process.Type); p != nil {
 			name := p[1]
+
 			// inside the docker image created by pack, executables specified as the names
 			// in the procfile will be added to /cnb/process. These executables run the commands
 			// specified in the procfile. Trying to run the commands as they are in the Procfile

@@ -36,6 +36,9 @@ const (
 	FlagRegistrySecret = "registry-secret"
 	FlagBuilder        = "builder"
 	FlagBuildPacks     = "build-packs"
+	FlagUnits          = "units"
+	FlagVersion        = "unit-version"
+	FlagProcess        = "unit-process"
 
 	FlagAppShort         = "a"
 	FlagImageShort       = "i"
@@ -88,6 +91,10 @@ type Options struct {
 	DockerRegistrySecret string
 	Builder              string
 	BuildPacks           []string
+
+	Units   int
+	Version int
+	Process string
 }
 
 type ChangeSet struct {
@@ -107,12 +114,15 @@ type ChangeSet struct {
 	dockerRegistrySecret *string
 	builder              *string
 	buildPacks           *[]string
-	version              *string
+	appVersion           *string
 	appType              *string
 	appUnit              *int
 	processes            *[]ketchv1.ProcessSpec
 	ketchYamlData        *ketchv1.KetchYamlData
 	cname                *ketchv1.CnameList
+	units                *int
+	version              *int
+	process              *string
 }
 
 func (o Options) GetChangeSet(flags *pflag.FlagSet) *ChangeSet {
@@ -163,6 +173,15 @@ func (o Options) GetChangeSet(flags *pflag.FlagSet) *ChangeSet {
 		FlagBuildPacks: func(c *ChangeSet) {
 			c.buildPacks = &o.BuildPacks
 		},
+		FlagUnits: func(c *ChangeSet) {
+			c.units = &o.Units
+		},
+		FlagVersion: func(c *ChangeSet) {
+			c.version = &o.Version
+		},
+		FlagProcess: func(c *ChangeSet) {
+			c.process = &o.Process
+		},
 	}
 	for k, f := range m {
 		if flags.Changed(k) {
@@ -185,10 +204,10 @@ func (c *ChangeSet) getYamlPath() (string, error) {
 	}
 	stat, err := os.Stat(*c.ketchYamlFileName)
 	if err != nil {
-		return "", newInvalidError(FlagKetchYaml)
+		return "", newInvalidValueError(FlagKetchYaml)
 	}
 	if stat.IsDir() {
-		return "", fmt.Errorf("%w %s is not a regular file", newInvalidError(FlagKetchYaml), *c.ketchYamlFileName)
+		return "", fmt.Errorf("%w %s is not a regular file", newInvalidValueError(FlagKetchYaml), *c.ketchYamlFileName)
 	}
 	return *c.ketchYamlFileName, nil
 }
@@ -210,7 +229,7 @@ func (c *ChangeSet) getFramework(ctx context.Context, client Client) (string, er
 	var p ketchv1.Framework
 	err := client.Get(ctx, types.NamespacedName{Name: *c.framework}, &p)
 	if apierrors.IsNotFound(err) {
-		return "", fmt.Errorf("%w framework %q has not been created", newInvalidError(FlagFramework), *c.framework)
+		return "", fmt.Errorf("%w framework %q has not been created", newInvalidValueError(FlagFramework), *c.framework)
 	}
 	if err != nil {
 		return "", errors.Wrap(err, "could not fetch framework %q", *c.framework)
@@ -232,7 +251,7 @@ func (c *ChangeSet) getSteps() (int, error) {
 	steps := *c.steps
 	if steps < minimumSteps || steps > maximumSteps {
 		return 0, fmt.Errorf("%w %s must be between %d and %d",
-			newInvalidError(FlagSteps), FlagSteps, minimumSteps, maximumSteps)
+			newInvalidValueError(FlagSteps), FlagSteps, minimumSteps, maximumSteps)
 	}
 
 	return *c.steps, nil
@@ -244,7 +263,7 @@ func (c *ChangeSet) getStepInterval() (time.Duration, error) {
 	}
 	dur, err := time.ParseDuration(*c.stepTimeInterval)
 	if err != nil {
-		return 0, newInvalidError(FlagStepInterval)
+		return 0, newInvalidValueError(FlagStepInterval)
 	}
 	return dur, nil
 }
@@ -263,7 +282,7 @@ func (c *ChangeSet) getEnvironments() ([]ketchv1.Env, error) {
 	}
 	envs, err := utils.MakeEnvironments(*c.envs)
 	if err != nil {
-		return nil, newInvalidError(FlagEnvironment)
+		return nil, newInvalidValueError(FlagEnvironment)
 	}
 	return envs, nil
 }
@@ -281,7 +300,7 @@ func (c *ChangeSet) getTimeout() (time.Duration, error) {
 	}
 	d, err := time.ParseDuration(*c.timeout)
 	if err != nil {
-		return 0, newInvalidError(FlagTimeout)
+		return 0, newInvalidValueError(FlagTimeout)
 	}
 	return d, nil
 }
@@ -306,6 +325,43 @@ func (c *ChangeSet) getBuilder(spec ketchv1.AppSpec) string {
 		}
 	}
 	return *c.builder
+}
+
+func (c *ChangeSet) getUnits() (int, error) {
+	if c.units == nil {
+		return 0, nil
+	}
+	if *c.units < 1 {
+		return 0, fmt.Errorf("%w %s must be 1 or greater",
+			newInvalidValueError(FlagUnits), FlagUnits)
+	}
+	return *c.units, nil
+}
+
+func (c *ChangeSet) getVersion() (int, error) {
+	if c.version == nil {
+		return 0, nil
+	}
+	if c.units == nil {
+		return 0, fmt.Errorf("%w %s must be used with %s flag",
+			newInvalidUsageError(FlagVersion), FlagVersion, FlagUnits)
+	}
+	if *c.version < 1 {
+		return 0, fmt.Errorf("%w %s must be 1 or greater",
+			newInvalidValueError(FlagVersion), FlagVersion)
+	}
+	return *c.version, nil
+}
+
+func (c *ChangeSet) getProcess() (string, error) {
+	if c.process == nil {
+		return "", nil
+	}
+	if c.units == nil {
+		return "", fmt.Errorf("%w %s must be used with %s flag",
+			newInvalidUsageError(FlagProcess), FlagProcess, FlagUnits)
+	}
+	return *c.process, nil
 }
 
 func (c *ChangeSet) getBuildPacks() ([]string, error) {
