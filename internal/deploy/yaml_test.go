@@ -42,9 +42,9 @@ processes:
         targetPort: 6666
         protocol: TCP
     hooks:
-      - restart:
-          before: pwd
-          after: echo "test"
+      restart:
+        before: pwd
+        after: echo "test"
   - name: worker
     cmd: python app.py
     units: 1

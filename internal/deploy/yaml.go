@@ -13,7 +13,7 @@ import (
 // Application represents the fields in an application.yaml file that will be
 // transitioned to a ChangeSet.
 type Application struct {
-	Version        *string    `json:"version"` // TODO - store on ketchv1.App
+	Version        *string    `json:"version"`
 	Type           *string    `json:"type"`
 	Name           *string    `json:"name"`
 	Image          *string    `json:"image"`
@@ -33,7 +33,7 @@ type Process struct {
 	Cmd   string `json:"cmd"`   // required
 	Units *int   `json:"units"` // unset? get from AppUnit
 	Ports []Port `json:"ports"` // appDeploymentSpec
-	Hooks []Hook `json:"hooks"`
+	Hooks Hooks  `json:"hooks"`
 }
 
 type Port struct {
@@ -42,7 +42,7 @@ type Port struct {
 	TargetPort int    `json:"targetPort"`
 }
 
-type Hook struct {
+type Hooks struct {
 	Restart Restart `json:"restart"`
 }
 
@@ -101,10 +101,13 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 				Units: process.Units,
 				Env:   envs,
 			})
-			for _, hook := range process.Hooks {
-				beforeHooks = append(beforeHooks, hook.Restart.Before)
-				afterHooks = append(afterHooks, hook.Restart.After)
+			if process.Hooks.Restart.Before != "" {
+				beforeHooks = append(beforeHooks, process.Hooks.Restart.Before)
 			}
+			if process.Hooks.Restart.After != "" {
+				afterHooks = append(afterHooks, process.Hooks.Restart.After)
+			}
+
 			var ports []ketchv1.KetchYamlProcessPortConfig
 			for _, port := range process.Ports {
 				ports = append(ports, ketchv1.KetchYamlProcessPortConfig{
