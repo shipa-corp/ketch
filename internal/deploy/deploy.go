@@ -256,6 +256,7 @@ func deployImage(ctx context.Context, svc *Services, app *ketchv1.App, params *C
 	updateRequest.version = version
 	process, _ := params.getProcess()
 	updateRequest.process = process
+	updateRequest.processes = params.processes
 
 	if app, err = updateAppCRD(ctx, svc, params.appName, updateRequest); err != nil {
 		deploymentType := "image"
@@ -308,6 +309,7 @@ type updateAppCRDRequest struct {
 	units             int
 	version           int
 	process           string
+	processes         *[]ketchv1.ProcessSpec
 }
 
 func updateAppCRD(ctx context.Context, svc *Services, appName string, args updateAppCRDRequest) (*ketchv1.App, error) {
@@ -345,10 +347,22 @@ func updateAppCRD(ctx context.Context, svc *Services, appName string, args updat
 
 		processes := make([]ketchv1.ProcessSpec, 0, len(args.procFile.Processes))
 		for _, processName := range args.procFile.SortedNames() {
+			units := defaultUnitsPerProcess
+			var env []ketchv1.Env
+			if args.processes != nil {
+				for _, process := range *args.processes {
+					if process.Name == processName && process.Units != nil {
+						units = *process.Units
+						env = process.Env
+					}
+				}
+			}
 			cmd := args.procFile.Processes[processName]
 			ps := ketchv1.ProcessSpec{
-				Name: processName,
-				Cmd:  cmd,
+				Name:  processName,
+				Cmd:   cmd,
+				Env:   env,
+				Units: &units,
 			}
 
 			if usePreviousDeploymentSpecs {
