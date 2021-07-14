@@ -56,8 +56,9 @@ appUnit: 2
 cname:
   dnsName: test.10.10.10.20`,
 			options: &Options{
-				Timeout: "1m",
-				Wait:    true,
+				Timeout:       "1m",
+				Wait:          true,
+				AppSourcePath: ".",
 			},
 			changeSet: &ChangeSet{
 				appName:              "test",
@@ -192,7 +193,9 @@ processes:
     units: 1
   - name: worker
     cmd: python app.py`,
-			options: &Options{},
+			options: &Options{
+				AppSourcePath: ".",
+			},
 			changeSet: &ChangeSet{
 				appName:            "test",
 				appUnit:            testutils.IntPtr(2),
@@ -254,7 +257,7 @@ environment:
   - bad:variable
 `,
 			options: &Options{},
-			errStr:  errEnvvarFormat.Error(),
+			errStr:  "env variables should have NAME=VALUE format",
 		},
 	}
 	for _, tt := range tests {

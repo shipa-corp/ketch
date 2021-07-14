@@ -25,6 +25,10 @@ Details about Procfile conventions can be found here: https://devcenter.heroku.c
 Deploy from an image:
   ketch app deploy <app name> -i myregistry/myimage:latest
 
+Users can deploy from image or source code by passing a filename such as app.yaml containing fields like:
+	name: test
+	image: gcr.io/shipa-ci/sample-go-app:latest
+	framework: myframework
 `
 )
 
@@ -33,7 +37,7 @@ func newAppDeployCmd(cfg config, params *deploy.Services, configDefaultBuilder s
 	var options deploy.Options
 
 	cmd := &cobra.Command{
-		Use:   "deploy APPNAME [SOURCE DIRECTORY]",
+		Use:   "deploy [APPNAME|FILENAME] [SOURCE DIRECTORY]",
 		Short: "Deploy an app.",
 		Long:  appDeployHelp,
 		Args:  cobra.RangeArgs(1, 2),

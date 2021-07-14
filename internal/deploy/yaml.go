@@ -4,6 +4,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/shipa-corp/ketch/internal/utils"
+
 	"github.com/shipa-corp/ketch/internal/errors"
 	"sigs.k8s.io/yaml"
 
@@ -60,8 +62,6 @@ var (
 	defaultAppUnit  = 1
 	typeApplication = "Application"
 	typeJob         = "Job"
-
-	errEnvvarFormat = errors.New("environment variables should be in the format - name=value")
 )
 
 // GetChangeSetFromYaml reads an application.yaml file and returns a ChangeSet
@@ -79,12 +79,9 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 
 	var envs []ketchv1.Env
 	if application.Environment != nil {
-		for _, env := range *application.Environment {
-			arr := strings.Split(env, "=")
-			if len(arr) != 2 {
-				return nil, errEnvvarFormat
-			}
-			envs = append(envs, ketchv1.Env{Name: arr[0], Value: arr[1]})
+		envs, err = utils.MakeEnvironments(*application.Environment)
+		if err != nil {
+			return nil, err
 		}
 	}
 	// processes, hooks, ports
@@ -153,6 +150,9 @@ func (o *Options) GetChangeSetFromYaml(filename string) (*ChangeSet, error) {
 		timeout:              &o.Timeout,
 		wait:                 &o.Wait,
 	}
+	if o.AppSourcePath != "" {
+		c.sourcePath = &o.AppSourcePath
+	}
 	if application.CName != nil {
 		c.cname = &ketchv1.CnameList{application.CName.DNSName}
 	}
@@ -173,11 +173,7 @@ func (c *ChangeSet) applyDefaults() {
 		c.appType = &typeApplication
 	}
 	c.yamlStrictDecoding = true
-	// building from source in PWD
-	if c.builder != nil && c.sourcePath == nil {
-		sourcePath := "."
-		c.sourcePath = &sourcePath
-	}
+
 	// default to AppUnits if process.Units is unset
 	if c.appUnit == nil {
 		c.appUnit = &defaultAppUnit
@@ -185,11 +181,7 @@ func (c *ChangeSet) applyDefaults() {
 	if c.processes != nil {
 		for i := range *c.processes {
 			if (*c.processes)[i].Units == nil {
-				if c.appUnit != nil {
-					(*c.processes)[i].Units = c.appUnit
-				} else {
-					(*c.processes)[i].Units = &defaultAppUnit
-				}
+				(*c.processes)[i].Units = c.appUnit
 			}
 		}
 	}

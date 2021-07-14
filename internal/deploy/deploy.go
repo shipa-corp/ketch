@@ -24,11 +24,10 @@ import (
 )
 
 const (
-	defaultTrafficWeight   = 100
-	minimumSteps           = 2
-	maximumSteps           = 100
-	defaultProcFile        = "Procfile"
-	defaultUnitsPerProcess = 1
+	defaultTrafficWeight = 100
+	minimumSteps         = 2
+	maximumSteps         = 100
+	defaultProcFile      = "Procfile"
 )
 
 // Client represents go sdk k8s client operations that we need.
@@ -347,22 +346,10 @@ func updateAppCRD(ctx context.Context, svc *Services, appName string, args updat
 
 		processes := make([]ketchv1.ProcessSpec, 0, len(args.procFile.Processes))
 		for _, processName := range args.procFile.SortedNames() {
-			units := defaultUnitsPerProcess
-			var env []ketchv1.Env
-			if args.processes != nil {
-				for _, process := range *args.processes {
-					if process.Name == processName && process.Units != nil {
-						units = *process.Units
-						env = process.Env
-					}
-				}
-			}
 			cmd := args.procFile.Processes[processName]
 			ps := ketchv1.ProcessSpec{
-				Name:  processName,
-				Cmd:   cmd,
-				Env:   env,
-				Units: &units,
+				Name: processName,
+				Cmd:  cmd,
 			}
 
 			if usePreviousDeploymentSpecs {
