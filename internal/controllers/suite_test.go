@@ -75,6 +75,18 @@ func setup(reader templates.Reader, helm Helm, objects []runtime.Object) (*testi
 	if err != nil {
 		return nil, err
 	}
+	err = (&JobReconciler{
+		Client:         k8sManager.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("Job"),
+		TemplateReader: reader,
+		HelmFactoryFn: func(namespace string) (Helm, error) {
+			return helm, nil
+		},
+		Recorder: k8sManager.GetEventRecorderFor("Job"),
+	}).SetupWithManager(k8sManager)
+	if err != nil {
+		return nil, err
+	}
 	err = (&FrameworkReconciler{
 		Client: k8sManager.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Framework"),
@@ -102,6 +114,8 @@ func setup(reader templates.Reader, helm Helm, objects []runtime.Object) (*testi
 			name = x.Name
 		case *ketchv1.App:
 			name = x.Name
+		case *ketchv1.Job:
+			name = x.Name
 		}
 		key := types.NamespacedName{Name: name}
 		if err = ctx.k8sClient.Get(context.TODO(), key, obj); err != nil {
@@ -115,6 +129,10 @@ func setup(reader templates.Reader, helm Helm, objects []runtime.Object) (*testi
 		case *ketchv1.App:
 			if len(x.Status.Conditions) == 0 {
 				return nil, fmt.Errorf("failed to run %v app", x.Name)
+			}
+		case *ketchv1.Job:
+			if x.Status.Framework.String() == "" {
+				return nil, fmt.Errorf("failed to run %v job", x.Name)
 			}
 		}
 	}

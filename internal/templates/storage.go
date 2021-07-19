@@ -71,6 +71,9 @@ var (
 	TraefikDefaultTemplates = Templates{
 		Yamls: GeneratedYamls.TraefikYamls,
 	}
+	NoIngressTemplates = Templates{
+		Yamls: GeneratedYamls.NoIngressYamls,
+	}
 )
 
 // IngressConfigMapName returns a name of a configmap to store the ingress' templates to render helm chart.

@@ -13,8 +13,8 @@ import (
 	"text/template"
 	"time"
 
-	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
+
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
@@ -169,7 +169,7 @@ func New(application *ketchv1.App, framework *ketchv1.Framework, opts ...Option)
 	}, nil
 }
 
-func (chrt ApplicationChart) getValues() (map[string]interface{}, error) {
+func (chrt ApplicationChart) getValuesMap() (map[string]interface{}, error) {
 	bs, err := yaml.Marshal(chrt.values)
 	if err != nil {
 		return nil, err
@@ -264,37 +264,19 @@ func (chrt ApplicationChart) ExportToDirectory(directory string, chartConfig Cha
 	return nil
 }
 
-func (chrt ApplicationChart) bufferedFiles(chartConfig ChartConfig) ([]*loader.BufferedFile, error) {
-	files := make([]*loader.BufferedFile, 0, len(chrt.templates)+1)
-	for filename, content := range chrt.templates {
-		files = append(files, &loader.BufferedFile{
-			Name: filepath.Join("templates", filename),
-			Data: []byte(content),
-		})
-	}
-	valuesBytes, err := yaml.Marshal(chrt.values)
-	if err != nil {
-		return nil, err
-	}
-	files = append(files, &loader.BufferedFile{
-		Name: "values.yaml",
-		Data: valuesBytes,
-	})
-
-	chartYamlContent, err := chartConfig.render()
-	if err != nil {
-		return nil, err
-	}
-	files = append(files, &loader.BufferedFile{
-		Name: "Chart.yaml",
-		Data: chartYamlContent,
-	})
-	return files, nil
+// GetName returns the app name, satisfying TemplateValuer
+func (a ApplicationChart) GetName() string {
+	return a.values.App.Name
 }
 
-// AppName returns a name of the application.
-func (chrt ApplicationChart) AppName() string {
-	return chrt.values.App.Name
+// GetTemplates returns the app templates, satisfying TemplateValuer
+func (a ApplicationChart) GetTemplates() map[string]string {
+	return a.templates
+}
+
+// GetValues returns the app values, satisfying TemplateValuer
+func (a ApplicationChart) GetValues() interface{} {
+	return a.values
 }
 
 func isAppAccessible(a *app) bool {

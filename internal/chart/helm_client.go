@@ -17,6 +17,14 @@ type HelmClient struct {
 	namespace string
 }
 
+// TemplateValuer is an interface that permits types that implement it (e.g. Application, Job)
+// to be parameters in the UpdateChart function.
+type TemplateValuer interface {
+	GetValues() interface{}
+	GetTemplates() map[string]string
+	GetName() string
+}
+
 // NewHelmClient returns a HelmClient instance.
 func NewHelmClient(namespace string) (*HelmClient, error) {
 	cfg, err := getActionConfig(namespace)
@@ -47,9 +55,9 @@ func getActionConfig(namespace string) (*action.Configuration, error) {
 type InstallOption func(install *action.Install)
 
 // UpdateChart checks if the app chart is already installed and performs "helm install" or "helm update" operation.
-func (c HelmClient) UpdateChart(appChrt ApplicationChart, config ChartConfig, opts ...InstallOption) (*release.Release, error) {
-	appName := appChrt.AppName()
-	files, err := appChrt.bufferedFiles(config)
+func (c HelmClient) UpdateChart(tv TemplateValuer, config ChartConfig, opts ...InstallOption) (*release.Release, error) {
+	appName := tv.GetName()
+	files, err := bufferedFiles(config, tv.GetTemplates(), tv.GetValues())
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +65,7 @@ func (c HelmClient) UpdateChart(appChrt ApplicationChart, config ChartConfig, op
 	if err != nil {
 		return nil, err
 	}
-	vals, err := appChrt.getValues()
+	vals, err := getValuesMap(tv.GetValues())
 	if err != nil {
 		return nil, err
 	}

@@ -59,7 +59,7 @@ type helmFactoryFn func(namespace string) (Helm, error)
 
 // Helm has methods to update/delete helm charts.
 type Helm interface {
-	UpdateChart(appChrt chart.ApplicationChart, config chart.ChartConfig, opts ...chart.InstallOption) (*release.Release, error)
+	UpdateChart(tv chart.TemplateValuer, config chart.ChartConfig, opts ...chart.InstallOption) (*release.Release, error)
 	DeleteChart(appName string) error
 }
 
@@ -115,7 +115,7 @@ func (r *AppReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		reason := AppReconcileReason{AppName: app.Name, DeploymentCount: app.Spec.DeploymentsCount}
 		r.Recorder.Event(&app, v1.EventTypeNormal, reason.String(), "success")
 	}
-	app.SetCondition(ketchv1.AppScheduled, scheduleResult.status, scheduleResult.message, metav1.NewTime(time.Now()))
+	app.SetCondition(ketchv1.Scheduled, scheduleResult.status, scheduleResult.message, metav1.NewTime(time.Now()))
 	if err := r.Status().Update(context.Background(), &app); err != nil {
 		return result, err
 	}

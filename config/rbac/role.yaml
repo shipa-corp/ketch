@@ -172,6 +172,32 @@ rules:
   - update
   - watch
 - apiGroups:
+  - resources.resources
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - resources.resources
+  resources:
+  - jobs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - resources.resources
+  resources:
+  - jobs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - theketch.io
   resources:
   - apps

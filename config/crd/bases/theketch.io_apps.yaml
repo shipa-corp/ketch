@@ -454,7 +454,7 @@ spec:
             description:
               maxLength: 140
               type: string
-            dockerRegisty:
+            dockerRegistry:
               description: DockerRegistry contains docker registry configuration of
                 the application.
               properties:
@@ -514,7 +514,7 @@ spec:
             conditions:
               description: Conditions of App resource.
               items:
-                description: AppCondition contains details for the current condition
+                description: Condition contains details for the current condition
                   of this app.
                 properties:
                   lastTransitionTime:

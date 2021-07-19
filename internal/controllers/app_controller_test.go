@@ -42,8 +42,8 @@ type helm struct {
 	deleteChartCalled  []string
 }
 
-func (h *helm) UpdateChart(appChrt chart.ApplicationChart, config chart.ChartConfig, opts ...chart.InstallOption) (*release.Release, error) {
-	return nil, h.updateChartResults[appChrt.AppName()]
+func (h *helm) UpdateChart(tv chart.TemplateValuer, config chart.ChartConfig, opts ...chart.InstallOption) (*release.Release, error) {
+	return nil, h.updateChartResults[tv.GetName()]
 }
 
 func (h *helm) DeleteChart(appName string) error {
@@ -180,7 +180,7 @@ func TestAppReconciler_Reconcile(t *testing.T) {
 					break
 				}
 			}
-			condition := resultApp.Status.Condition(ketchv1.AppScheduled)
+			condition := resultApp.Status.Condition(ketchv1.Scheduled)
 			require.NotNil(t, condition)
 			require.Equal(t, tt.wantConditionStatus, condition.Status)
 			assert.Equal(t, tt.wantConditionMessage, condition.Message)

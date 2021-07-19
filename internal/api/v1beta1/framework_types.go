@@ -98,10 +98,20 @@ type FrameworkStatus struct {
 
 	Namespace *v1.ObjectReference `json:"namespace,omitempty"`
 	Apps      []string            `json:"apps,omitempty"`
+	Jobs      []string            `json:"jobs,omitempty"`
 }
 
 func (p *Framework) HasApp(name string) bool {
 	for _, appName := range p.Status.Apps {
+		if appName == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *Framework) HasJob(name string) bool {
+	for _, appName := range f.Status.Jobs {
 		if appName == name {
 			return true
 		}

@@ -6,33 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: frameworks.theketch.io
+  name: jobs.theketch.io
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .status.phase
-    name: Status
-    type: string
-  - JSONPath: .status.namespace.name
-    name: Target Namespace
-    type: string
-  - JSONPath: .status.apps
-    name: apps
-    type: string
-  - JSONPath: .spec.appQuotaLimit
-    name: quota
-    type: string
   group: theketch.io
   names:
-    kind: Framework
-    listKind: FrameworkList
-    plural: frameworks
-    singular: framework
-  scope: Cluster
+    kind: Job
+    listKind: JobList
+    plural: jobs
+    singular: job
+  scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: Framework is the Schema for the frameworks API
+      description: Job is the Schema for the jobs API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -47,56 +34,89 @@ spec:
         metadata:
           type: object
         spec:
-          description: FrameworkSpec defines the desired state of Framework
+          description: JobSpec defines the desired state of Job
           properties:
-            appQuotaLimit:
+            backoffLimit:
               type: integer
-            ingressController:
-              description: IngressControllerSpec contains configuration for an ingress
-                controller.
-              properties:
-                className:
-                  type: string
-                clusterIssuer:
-                  type: string
-                serviceEndpoint:
-                  type: string
-                type:
-                  description: IngressControllerType is a type of an ingress controller
-                    for this framework.
-                  enum:
-                  - traefik
-                  - istio
-                  type: string
-              required:
-              - type
-              type: object
+            completions:
+              type: integer
+            containers:
+              items:
+                description: Container represents a single container run in a Job
+                properties:
+                  command:
+                    items:
+                      type: string
+                    type: array
+                  image:
+                    type: string
+                  name:
+                    type: string
+                required:
+                - command
+                - image
+                - name
+                type: object
+              type: array
+            description:
+              type: string
+            framework:
+              type: string
             name:
               type: string
-            namespace:
-              minLength: 1
+            parallelism:
+              type: integer
+            policy:
+              description: Policy represents the policy types a job can have
+              properties:
+                restartPolicy:
+                  type: string
+              required:
+              - restartPolicy
+              type: object
+            suspend:
+              type: boolean
+            type:
               type: string
             version:
               type: string
           required:
-          - appQuotaLimit
+          - description
+          - framework
           - name
-          - namespace
+          - policy
+          - type
+          - version
           type: object
         status:
-          description: FrameworkStatus defines the observed state of Framework
+          description: JobStatus defines the observed state of Job
           properties:
-            apps:
+            conditions:
               items:
-                type: string
+                description: Condition contains details for the current condition
+                  of this app.
+                properties:
+                  lastTransitionTime:
+                    description: LastTransitionTime is the timestamp corresponding
+                      to the last status.
+                    format: date-time
+                    type: string
+                  message:
+                    description: A human readable message indicating details about
+                      why the application is in this condition.
+                    type: string
+                  status:
+                    description: Status of the condition.
+                    type: string
+                  type:
+                    description: Type of the condition.
+                    type: string
+                required:
+                - status
+                - type
+                type: object
               type: array
-            jobs:
-              items:
-                type: string
-              type: array
-            message:
-              type: string
-            namespace:
+            framework:
               description: 'ObjectReference contains enough information to let you
                 inspect or modify the referred object. --- New uses of this type are
                 discouraged because of difficulty describing its usage when embedded
@@ -154,8 +174,6 @@ spec:
                   description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                   type: string
               type: object
-            phase:
-              type: string
           type: object
       type: object
   version: v1beta1

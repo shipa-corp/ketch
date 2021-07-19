@@ -884,8 +884,8 @@ func TestApp_Phase(t *testing.T) {
 					},
 				},
 				Status: AppStatus{
-					Conditions: []AppCondition{
-						{Type: AppScheduled, Status: v1.ConditionTrue},
+					Conditions: []Condition{
+						{Type: Scheduled, Status: v1.ConditionTrue},
 					},
 				},
 			},
@@ -900,8 +900,8 @@ func TestApp_Phase(t *testing.T) {
 					},
 				},
 				Status: AppStatus{
-					Conditions: []AppCondition{
-						{Type: AppScheduled, Status: v1.ConditionFalse},
+					Conditions: []Condition{
+						{Type: Scheduled, Status: v1.ConditionFalse},
 					},
 				},
 			},
@@ -912,8 +912,8 @@ func TestApp_Phase(t *testing.T) {
 			app: App{
 				Spec: AppSpec{},
 				Status: AppStatus{
-					Conditions: []AppCondition{
-						{Type: AppScheduled, Status: v1.ConditionTrue},
+					Conditions: []Condition{
+						{Type: Scheduled, Status: v1.ConditionTrue},
 					},
 				},
 			},
@@ -935,35 +935,35 @@ func TestApp_SetCondition(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		currentConditions []AppCondition
-		wantConditions    []AppCondition
+		currentConditions []Condition
+		wantConditions    []Condition
 	}{
 		{
 			name:              "add condition",
 			currentConditions: nil,
-			wantConditions: []AppCondition{
-				{Type: AppScheduled, Status: v1.ConditionTrue, LastTransitionTime: &t2, Message: "message"},
+			wantConditions: []Condition{
+				{Type: Scheduled, Status: v1.ConditionTrue, LastTransitionTime: &t2, Message: "message"},
 			},
 		},
 		{
 			name:              "message updated",
-			currentConditions: []AppCondition{{Type: AppScheduled, Status: v1.ConditionTrue, LastTransitionTime: &t1, Message: "old-message"}},
-			wantConditions: []AppCondition{
-				{Type: AppScheduled, Status: v1.ConditionTrue, LastTransitionTime: &t2, Message: "message"},
+			currentConditions: []Condition{{Type: Scheduled, Status: v1.ConditionTrue, LastTransitionTime: &t1, Message: "old-message"}},
+			wantConditions: []Condition{
+				{Type: Scheduled, Status: v1.ConditionTrue, LastTransitionTime: &t2, Message: "message"},
 			},
 		},
 		{
 			name:              "status updated",
-			currentConditions: []AppCondition{{Type: AppScheduled, Status: v1.ConditionFalse, LastTransitionTime: &t1, Message: "message"}},
-			wantConditions: []AppCondition{
-				{Type: AppScheduled, Status: v1.ConditionTrue, LastTransitionTime: &t2, Message: "message"},
+			currentConditions: []Condition{{Type: Scheduled, Status: v1.ConditionFalse, LastTransitionTime: &t1, Message: "message"}},
+			wantConditions: []Condition{
+				{Type: Scheduled, Status: v1.ConditionTrue, LastTransitionTime: &t2, Message: "message"},
 			},
 		},
 		{
 			name:              "no need to update",
-			currentConditions: []AppCondition{{Type: AppScheduled, Status: v1.ConditionTrue, LastTransitionTime: &t1, Message: "message"}},
-			wantConditions: []AppCondition{
-				{Type: AppScheduled, Status: v1.ConditionTrue, LastTransitionTime: &t1, Message: "message"},
+			currentConditions: []Condition{{Type: Scheduled, Status: v1.ConditionTrue, LastTransitionTime: &t1, Message: "message"}},
+			wantConditions: []Condition{
+				{Type: Scheduled, Status: v1.ConditionTrue, LastTransitionTime: &t1, Message: "message"},
 			},
 		},
 	}
@@ -974,8 +974,8 @@ func TestApp_SetCondition(t *testing.T) {
 					Conditions: tt.currentConditions,
 				},
 			}
-			condition := AppCondition{
-				Type:               AppScheduled,
+			condition := Condition{
+				Type:               Scheduled,
 				Status:             v1.ConditionTrue,
 				LastTransitionTime: &t2,
 				Message:            "message",

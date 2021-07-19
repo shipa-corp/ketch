@@ -87,6 +87,10 @@ func main() {
 		setupLog.Error(err, "unable to set default templates")
 		os.Exit(1)
 	}
+	if err = storage.Update(templates.IngressConfigMapName("none"), templates.NoIngressTemplates); err != nil {
+		setupLog.Error(err, "unable to set default templates")
+		os.Exit(1)
+	}
 
 	if err = (&controllers.AppReconciler{
 		TemplateReader: storage,
@@ -100,6 +104,20 @@ func main() {
 		Recorder: mgr.GetEventRecorderFor("App"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "App")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.JobReconciler{
+		Client:         mgr.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("Job"),
+		Scheme:         mgr.GetScheme(),
+		TemplateReader: storage,
+		HelmFactoryFn: func(namespace string) (controllers.Helm, error) {
+			return chart.NewHelmClient(namespace)
+		},
+		Recorder: mgr.GetEventRecorderFor("Job"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Job")
 		os.Exit(1)
 	}
 

@@ -1,0 +1,30 @@
+{{- if .Values.job }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    theketch.io/app-name: {{ $.Values.job.name }}
+  name: {{ $.Values.job.name }}
+spec:
+  {{- if $.Values.job.parallelism }}
+{{ $.Values.job.parallelism | toYaml | indent 4 }}
+  {{- end }}
+  {{- if $.Values.job.parallelism }}
+{{ $.Values.job.parallelism | toYaml | indent 4 }}
+  {{- end }}
+  {{- if $.Values.job.backoffLimit }}
+{{ $.Values.job.backoffLimit | toYaml | indent 4 }}
+  {{- end }}
+  {{- if $.Values.job.suspend }}
+{{ $.Values.job.suspend | toYaml | indent 4 }}
+  {{- end }}
+  template:
+    spec:
+      restartPolicy: {{ $.Values.job.policy.restartPolicy }}
+      containers:
+        {{ range $_, $container := $.Values.job.containers }}
+        - name: {{ $container.name }}
+          image: {{ $container.image }}
+          command: {{ $container.command | toJson }}
+        {{ end }}
+  {{ end }}
